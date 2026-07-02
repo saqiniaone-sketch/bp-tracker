@@ -1,20 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp } from "lucide-react";
-
-const STORAGE_KEY = "bp-readings";
-
-// Simple localStorage-backed persistence (swap this out for a real
-// backend/database later if you want readings synced across devices).
-const storage = {
-  get(key) {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  },
-  set(key, value) {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  },
-};
+import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut } from "lucide-react";
+import { supabase } from "./supabaseClient";
+import Auth from "./Auth";
 
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
@@ -95,7 +83,31 @@ const RANGE_OPTIONS = [
   { key: "all", label: "All time" },
 ];
 
-export default function BPTracker() {
+export default function App() {
+  const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5C6E", fontFamily: "'Inter', sans-serif" }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (!session) return <Auth />;
+
+  return <BPTracker session={session} />;
+}
+
+function BPTracker({ session }) {
   const [readings, setReadings] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [range, setRange] = useState("30");
@@ -108,26 +120,24 @@ export default function BPTracker() {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    try {
-      setReadings(storage.get(STORAGE_KEY));
-    } catch (e) {
-      console.error("Failed to load readings", e);
-    } finally {
-      setLoaded(true);
+  const loadReadings = async () => {
+    const { data, error } = await supabase
+      .from("readings")
+      .select("*")
+      .order("when_at", { ascending: false });
+    if (error) {
+      console.error("Failed to load readings", error);
+    } else {
+      setReadings(data.map((r) => ({ id: r.id, sys: r.sys, dia: r.dia, pulse: r.pulse, when: r.when_at, note: r.note || "" })));
     }
-  }, []);
-
-  const persist = (next) => {
-    setReadings(next);
-    try {
-      storage.set(STORAGE_KEY, next);
-    } catch (e) {
-      console.error("Failed to save readings", e);
-    }
+    setLoaded(true);
   };
 
-  const addReading = () => {
+  useEffect(() => {
+    loadReadings();
+  }, []);
+
+  const addReading = async () => {
     const sys = parseInt(form.systolic, 10);
     const dia = parseInt(form.diastolic, 10);
     const pulse = form.pulse ? parseInt(form.pulse, 10) : null;
@@ -136,21 +146,29 @@ export default function BPTracker() {
       return;
     }
     setError("");
-    const entry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    const { error } = await supabase.from("readings").insert({
+      user_id: session.user.id,
       sys,
       dia,
       pulse,
-      when: new Date(form.when).toISOString(),
+      when_at: new Date(form.when).toISOString(),
       note: form.note.trim(),
-    };
-    const next = [entry, ...readings].sort((a, b) => new Date(b.when) - new Date(a.when));
-    persist(next);
+    });
+    if (error) {
+      setError(error.message);
+      return;
+    }
     setForm({ ...form, systolic: "", diastolic: "", pulse: "", note: "" });
+    loadReadings();
   };
 
-  const deleteReading = (id) => {
-    persist(readings.filter((r) => r.id !== id));
+  const deleteReading = async (id) => {
+    const { error } = await supabase.from("readings").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to delete reading", error);
+      return;
+    }
+    setReadings((prev) => prev.filter((r) => r.id !== id));
   };
 
   const filtered = useMemo(() => {
@@ -197,11 +215,29 @@ export default function BPTracker() {
     >
       <div style={{ maxWidth: 780, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <HeartPulse size={22} color="#C75146" />
-          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
-            PRESSURE LOG
-          </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <HeartPulse size={22} color="#C75146" />
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
+              PRESSURE LOG
+            </span>
+          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "none",
+              border: "none",
+              color: "#4A5C6E",
+              fontSize: 12,
+              cursor: "pointer",
+              padding: "4px 8px",
+            }}
+          >
+            <LogOut size={14} /> Sign out
+          </button>
         </div>
         <h1
           style={{
