@@ -1,0 +1,513 @@
+import { useState, useEffect, useMemo } from "react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp } from "lucide-react";
+
+const STORAGE_KEY = "bp-readings";
+
+// Simple localStorage-backed persistence (swap this out for a real
+// backend/database later if you want readings synced across devices).
+const storage = {
+  get(key) {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  },
+  set(key, value) {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  },
+};
+
+// --- Clinical classification (AHA guidelines) ---
+function classify(sys, dia) {
+  if (sys >= 180 || dia >= 120) return { key: "crisis", label: "Hypertensive Crisis", color: "#8B2E3C", advice: "Seek medical attention promptly." };
+  if (sys >= 140 || dia >= 90) return { key: "stage2", label: "High Blood Pressure — Stage 2", color: "#C75146", advice: "Talk with a clinician about treatment." };
+  if (sys >= 130 || dia >= 80) return { key: "stage1", label: "High Blood Pressure — Stage 1", color: "#D97B4F", advice: "Lifestyle changes recommended; monitor closely." };
+  if (sys >= 120 && dia < 80) return { key: "elevated", label: "Elevated", color: "#D9A544", advice: "A good time to focus on healthy habits." };
+  if (sys < 120 && dia < 80) return { key: "normal", label: "Normal", color: "#4C8C6B", advice: "Keep up the good work." };
+  return { key: "normal", label: "Normal", color: "#4C8C6B", advice: "Keep up the good work." };
+}
+
+function fmtDateShort(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+function fmtDateFull(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// --- Gauge dial: arc from -120deg to +120deg mapped to systolic 80-200 ---
+function Gauge({ sys, dia }) {
+  const cat = classify(sys, dia);
+  const min = 80, max = 200;
+  const clamped = Math.max(min, Math.min(max, sys || min));
+  const pct = (clamped - min) / (max - min);
+  const angle = -120 + pct * 240; // degrees
+
+  const cx = 140, cy = 140, r = 108;
+  const toXY = (deg) => {
+    const rad = (deg - 90) * (Math.PI / 180);
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const arcPath = (startDeg, endDeg) => {
+    const [x1, y1] = toXY(startDeg);
+    const [x2, y2] = toXY(endDeg);
+    const large = endDeg - startDeg > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  };
+
+  // segments proportional to sys thresholds 80-120-130-140-180-200 mapped over -120..120
+  const segStops = [80, 120, 130, 140, 180, 200];
+  const segColors = ["#4C8C6B", "#D9A544", "#D97B4F", "#C75146", "#8B2E3C"];
+  const segAngles = segStops.map((v) => -120 + ((v - min) / (max - min)) * 240);
+
+  const [needleX, needleY] = toXY(angle);
+
+  return (
+    <svg viewBox="0 0 280 190" width="100%" height="auto" style={{ maxWidth: 280, display: "block", margin: "0 auto" }}>
+      {segAngles.slice(0, -1).map((a, i) => (
+        <path
+          key={i}
+          d={arcPath(a, segAngles[i + 1])}
+          fill="none"
+          stroke={segColors[i]}
+          strokeWidth="14"
+          strokeLinecap="butt"
+          opacity="0.85"
+        />
+      ))}
+      {/* needle */}
+      <line x1={cx} y1={cy} x2={needleX} y2={needleY} stroke="#1B2B44" strokeWidth="3" strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r="7" fill="#1B2B44" />
+      <circle cx={cx} cy={cy} r="3" fill="#EEF2F0" />
+      <text x={cx} y={cy + 42} textAnchor="middle" fontFamily="Fraunces, serif" fontSize="34" fontWeight="600" fill="#1B2B44">
+        {sys || "--"}/{dia || "--"}
+      </text>
+      <text x={cx} y={cy + 62} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="11" letterSpacing="0.08em" fill="#4A5C6E">
+        {cat.label.toUpperCase()}
+      </text>
+    </svg>
+  );
+}
+
+const RANGE_OPTIONS = [
+  { key: "7", label: "7 days" },
+  { key: "30", label: "30 days" },
+  { key: "all", label: "All time" },
+];
+
+export default function BPTracker() {
+  const [readings, setReadings] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [range, setRange] = useState("30");
+  const [form, setForm] = useState({
+    systolic: "",
+    diastolic: "",
+    pulse: "",
+    when: new Date().toISOString().slice(0, 16),
+    note: "",
+  });
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    try {
+      setReadings(storage.get(STORAGE_KEY));
+    } catch (e) {
+      console.error("Failed to load readings", e);
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  const persist = (next) => {
+    setReadings(next);
+    try {
+      storage.set(STORAGE_KEY, next);
+    } catch (e) {
+      console.error("Failed to save readings", e);
+    }
+  };
+
+  const addReading = () => {
+    const sys = parseInt(form.systolic, 10);
+    const dia = parseInt(form.diastolic, 10);
+    const pulse = form.pulse ? parseInt(form.pulse, 10) : null;
+    if (!sys || !dia || sys < 50 || sys > 260 || dia < 30 || dia > 200) {
+      setError("Enter a valid systolic (50–260) and diastolic (30–200) reading.");
+      return;
+    }
+    setError("");
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sys,
+      dia,
+      pulse,
+      when: new Date(form.when).toISOString(),
+      note: form.note.trim(),
+    };
+    const next = [entry, ...readings].sort((a, b) => new Date(b.when) - new Date(a.when));
+    persist(next);
+    setForm({ ...form, systolic: "", diastolic: "", pulse: "", note: "" });
+  };
+
+  const deleteReading = (id) => {
+    persist(readings.filter((r) => r.id !== id));
+  };
+
+  const filtered = useMemo(() => {
+    if (range === "all") return readings;
+    const days = parseInt(range, 10);
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return readings.filter((r) => new Date(r.when).getTime() >= cutoff);
+  }, [readings, range]);
+
+  const chartData = useMemo(
+    () =>
+      [...filtered]
+        .sort((a, b) => new Date(a.when) - new Date(b.when))
+        .map((r) => ({ date: fmtDateShort(r.when), sys: r.sys, dia: r.dia, full: fmtDateFull(r.when) })),
+    [filtered]
+  );
+
+  const stats = useMemo(() => {
+    if (filtered.length === 0) return null;
+    const sysVals = filtered.map((r) => r.sys);
+    const diaVals = filtered.map((r) => r.dia);
+    const avg = (arr) => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+    return {
+      avgSys: avg(sysVals),
+      avgDia: avg(diaVals),
+      maxSys: Math.max(...sysVals),
+      minSys: Math.min(...sysVals),
+      count: filtered.length,
+    };
+  }, [filtered]);
+
+  const latest = readings[0];
+  const latestCat = latest ? classify(latest.sys, latest.dia) : null;
+
+  return (
+    <div
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        background: "#EEF2F0",
+        minHeight: "100%",
+        color: "#1B2B44",
+        padding: "28px 18px 60px",
+      }}
+    >
+      <div style={{ maxWidth: 780, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <HeartPulse size={22} color="#C75146" />
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
+            PRESSURE LOG
+          </span>
+        </div>
+        <h1
+          style={{
+            fontFamily: "'Fraunces', serif",
+            fontSize: "clamp(28px, 5vw, 40px)",
+            fontWeight: 600,
+            margin: "4px 0 24px",
+            color: "#1B2B44",
+          }}
+        >
+          Your blood pressure, over time
+        </h1>
+
+        {/* Hero: Gauge + latest */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 20,
+            padding: "24px 20px",
+            boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 20,
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ flex: "0 0 auto" }}>
+            <Gauge sys={latest?.sys} dia={latest?.dia} />
+          </div>
+          <div style={{ flex: "1 1 220px", minWidth: 220 }}>
+            {latest ? (
+              <>
+                <div style={{ fontSize: 12, color: "#4A5C6E", marginBottom: 6 }}>Latest reading — {fmtDateFull(latest.when)}</div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    color: "#fff",
+                    background: latestCat.color,
+                    marginBottom: 10,
+                  }}
+                >
+                  {latestCat.label}
+                </div>
+                <div style={{ fontSize: 13, color: "#4A5C6E", lineHeight: 1.5 }}>{latestCat.advice}</div>
+                {latest.pulse && (
+                  <div style={{ marginTop: 10, fontSize: 13, color: "#4A5C6E", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Activity size={14} /> Pulse {latest.pulse} bpm
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ color: "#4A5C6E", fontSize: 14 }}>No readings yet. Log your first one below.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Add reading form */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 20,
+            padding: "22px 20px",
+            boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 14 }}>Add a reading</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+            <Field label="Systolic">
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="120"
+                value={form.systolic}
+                onChange={(e) => setForm({ ...form, systolic: e.target.value })}
+                style={inputStyle}
+              />
+            </Field>
+            <Field label="Diastolic">
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="80"
+                value={form.diastolic}
+                onChange={(e) => setForm({ ...form, diastolic: e.target.value })}
+                style={inputStyle}
+              />
+            </Field>
+            <Field label="Pulse (optional)">
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="72"
+                value={form.pulse}
+                onChange={(e) => setForm({ ...form, pulse: e.target.value })}
+                style={inputStyle}
+              />
+            </Field>
+            <Field label="When">
+              <input
+                type="datetime-local"
+                value={form.when}
+                onChange={(e) => setForm({ ...form, when: e.target.value })}
+                style={inputStyle}
+              />
+            </Field>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Field label="Note (optional)">
+              <input
+                type="text"
+                placeholder="e.g. after a walk, before medication"
+                value={form.note}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                style={{ ...inputStyle, width: "100%" }}
+              />
+            </Field>
+          </div>
+          {error && <div style={{ color: "#C75146", fontSize: 13, marginTop: 10 }}>{error}</div>}
+          <button
+            onClick={addReading}
+            style={{
+              marginTop: 16,
+              background: "#1B2B44",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "11px 20px",
+              fontSize: 14,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={16} /> Save reading
+          </button>
+        </div>
+
+        {/* Trend chart */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 20,
+            padding: "22px 20px",
+            boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <TrendingUp size={17} color="#3E7C8C" />
+              <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>Trend</span>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {RANGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setRange(opt.key)}
+                  style={{
+                    fontSize: 12,
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    border: "1px solid " + (range === opt.key ? "#1B2B44" : "#DCE3DF"),
+                    background: range === opt.key ? "#1B2B44" : "transparent",
+                    color: range === opt.key ? "#fff" : "#4A5C6E",
+                    cursor: "pointer",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {stats ? (
+            <>
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 12, fontFamily: "'IBM Plex Mono', monospace" }}>
+                <Stat label="Avg" value={`${stats.avgSys}/${stats.avgDia}`} />
+                <Stat label="Highest sys." value={stats.maxSys} />
+                <Stat label="Lowest sys." value={stats.minSys} />
+                <Stat label="Readings" value={stats.count} />
+              </div>
+              <div style={{ width: "100%", height: 220 }}>
+                <ResponsiveContainer>
+                  <LineChart data={chartData} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+                    <CartesianGrid stroke="#E4E9E6" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#4A5C6E" }} axisLine={{ stroke: "#DCE3DF" }} tickLine={false} />
+                    <YAxis domain={[40, 200]} tick={{ fontSize: 11, fill: "#4A5C6E" }} axisLine={false} tickLine={false} />
+                    <ReferenceLine y={120} stroke="#D9A544" strokeDasharray="4 4" strokeWidth={1} />
+                    <ReferenceLine y={80} stroke="#3E7C8C" strokeDasharray="4 4" strokeWidth={1} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 10, border: "1px solid #E4E9E6", fontSize: 12, fontFamily: "'Inter', sans-serif" }}
+                      labelFormatter={(_, payload) => (payload && payload[0] ? payload[0].payload.full : "")}
+                    />
+                    <Line type="monotone" dataKey="sys" stroke="#C75146" strokeWidth={2.5} dot={{ r: 3 }} name="Systolic" />
+                    <Line type="monotone" dataKey="dia" stroke="#3E7C8C" strokeWidth={2.5} dot={{ r: 3 }} name="Diastolic" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "#4A5C6E", fontSize: 14, padding: "20px 0" }}>Nothing to chart yet for this range.</div>
+          )}
+        </div>
+
+        {/* History */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 20,
+            padding: "22px 20px",
+            boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Calendar size={17} color="#1B2B44" />
+            <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>History</span>
+          </div>
+          {!loaded ? (
+            <div style={{ color: "#4A5C6E", fontSize: 14 }}>Loading…</div>
+          ) : readings.length === 0 ? (
+            <div style={{ color: "#4A5C6E", fontSize: 14 }}>Your logged readings will appear here.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {readings.map((r) => {
+                const cat = classify(r.sys, r.dia);
+                return (
+                  <div
+                    key={r.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 6px",
+                      borderBottom: "1px solid #EEF1EF",
+                    }}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: 999, background: cat.color, flex: "0 0 auto" }} />
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 16, fontWeight: 600, width: 90, flex: "0 0 auto" }}>
+                      {r.sys}/{r.dia}
+                    </div>
+                    <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "#1B2B44" }}>{fmtDateFull(r.when)}</div>
+                      <div style={{ fontSize: 12, color: "#4A5C6E", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {cat.label}
+                        {r.pulse ? ` · pulse ${r.pulse}` : ""}
+                        {r.note ? ` · ${r.note}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteReading(r.id)}
+                      aria-label="Delete reading"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#B7C0BC", padding: 6, flex: "0 0 auto" }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center", fontSize: 11, color: "#8C9A94", marginTop: 24 }}>
+          Categories follow American Heart Association guidelines. This is a personal log, not medical advice.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label style={{ display: "block" }}>
+      <div style={{ fontSize: 11, color: "#4A5C6E", marginBottom: 5, letterSpacing: "0.02em" }}>{label}</div>
+      {children}
+    </label>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: "#4A5C6E", letterSpacing: "0.04em", fontFamily: "'Inter', sans-serif" }}>{label.toUpperCase()}</div>
+      <div style={{ fontSize: 17, fontWeight: 600, color: "#1B2B44" }}>{value}</div>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "9px 11px",
+  borderRadius: 10,
+  border: "1px solid #DCE3DF",
+  fontSize: 14,
+  fontFamily: "'IBM Plex Mono', monospace",
+  color: "#1B2B44",
+  outline: "none",
+  background: "#FBFCFB",
+};
