@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.bp_tracker_nine_mauve.twa",
+        "sha256_cert_fingerprints": ["FF:00:98:C7:FA:AD:EB:57:0F:DE:1F:FE:B7:A1:99:4C:E6:C5:27:F1:24:D2:3D:9A:06:09:04:98:E4:5A:8F:CF"]
+      }
+    }]
