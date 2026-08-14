@@ -4,11 +4,7 @@ import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info,
 import { supabase } from "./supabaseClient";
 import Auth from "./Auth";
 
-// Which categories are serious enough to interrupt with a popup alert.
-// Borderline Stage 1 readings are shown on the gauge but don't pop up.
-function isDanger(catKey) {
-  return catKey === "low" || catKey === "stage2" || catKey === "crisis";
-}
+// --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
   if (sys >= 180 || dia >= 120) {
     return {
@@ -31,7 +27,7 @@ function classify(sys, dia) {
       label: "High Blood Pressure — Stage 2",
       color: "#C75146",
       advice: "Talk with a clinician about treatment.",
-      urgent: true,
+      urgent: false,
       steps: [
         "Rest quietly for a few minutes, then recheck to rule out a one-off spike.",
         "Note any symptoms — headache, dizziness, chest discomfort.",
@@ -73,9 +69,9 @@ function classify(sys, dia) {
     return {
       key: "low",
       label: "Low Blood Pressure",
-      color: "#8B2E3C",
+      color: "#3E7C8C",
       advice: "Take it easy and recheck shortly.",
-      urgent: true,
+      urgent: sys < 80 || dia < 50,
       steps: [
         "Sit or lie down right away, especially if you feel lightheaded or dizzy.",
         "If lying down, raise your legs slightly to help blood flow to your head.",
@@ -440,14 +436,6 @@ function BPTracker({ session }) {
   });
   const [error, setError] = useState("");
   const [alertReading, setAlertReading] = useState(null);
-  const [toast, setToast] = useState(null);
-  const toastTimerRef = useRef(null);
-
-  const showToast = (message, tone = "good") => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ message, tone });
-    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
-  };
 
   const loadReadings = async () => {
     const { data, error } = await supabase
@@ -491,13 +479,8 @@ function BPTracker({ session }) {
     loadReadings();
 
     const cat = classify(sys, dia);
-    if (isDanger(cat.key)) {
+    if (cat.key !== "normal" && cat.key !== "elevated") {
       setAlertReading({ sys, dia, cat });
-    } else if (cat.key === "normal") {
-      showToast(`${sys}/${dia} — normal. Nice work.`, "good");
-    } else {
-      // elevated or stage1: mild, non-urgent heads-up
-      showToast(`${sys}/${dia} — ${cat.label}. ${cat.advice}`, "mild");
     }
   };
 
@@ -789,7 +772,7 @@ function BPTracker({ session }) {
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 2, flex: "0 0 auto" }}>
-                      {isDanger(cat.key) && (
+                      {cat.key !== "normal" && cat.key !== "elevated" && (
                         <button
                           onClick={() => setAlertReading({ sys: r.sys, dia: r.dia, cat, when: r.when })}
                           aria-label="View advice for this reading"
@@ -819,7 +802,6 @@ function BPTracker({ session }) {
         </div>
 
       {alertReading && <AdviceModal reading={alertReading} onClose={() => setAlertReading(null)} />}
-      {toast && <Toast message={toast.message} tone={toast.tone} />}
     </>
   );
 }
@@ -1435,32 +1417,6 @@ function BreathingExercise() {
         </div>
       </div>
     </>
-  );
-}
-
-function Toast({ message, tone }) {
-  const bg = tone === "good" ? "#4C8C6B" : "#D9A544";
-  return (
-    <div
-      style={{
-        position: "fixed",
-        left: "50%",
-        bottom: 28,
-        transform: "translateX(-50%)",
-        background: bg,
-        color: "#fff",
-        padding: "12px 20px",
-        borderRadius: 999,
-        fontSize: 13.5,
-        fontWeight: 600,
-        boxShadow: "0 8px 24px rgba(27,43,68,0.25)",
-        zIndex: 1100,
-        maxWidth: "92vw",
-        textAlign: "center",
-      }}
-    >
-      {message}
-    </div>
   );
 }
 
