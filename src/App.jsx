@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info, Copy, Check } from "lucide-react";
+import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info, Copy, Check, Footprints, Play, Square, Wind } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import Auth from "./Auth";
 
@@ -184,7 +184,122 @@ export default function App() {
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
 
-  return <BPTracker session={session} />;
+  return <Dashboard session={session} />;
+}
+
+function Dashboard({ session }) {
+  const [section, setSection] = useState("bp"); // "bp" | "walk" | "breathe"
+
+  return (
+    <div
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        background: "#EEF2F0",
+        minHeight: "100%",
+        color: "#1B2B44",
+        padding: "28px 18px 60px",
+      }}
+    >
+      <div style={{ maxWidth: 780, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <HeartPulse size={22} color="#C75146" />
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
+              PRESSURE LOG
+            </span>
+          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "none",
+              border: "none",
+              color: "#4A5C6E",
+              fontSize: 12,
+              cursor: "pointer",
+              padding: "4px 8px",
+            }}
+          >
+            <LogOut size={14} /> Sign out
+          </button>
+        </div>
+        <h1
+          style={{
+            fontFamily: "'Fraunces', serif",
+            fontSize: "clamp(28px, 5vw, 40px)",
+            fontWeight: 600,
+            margin: "4px 0 20px",
+            color: "#1B2B44",
+          }}
+        >
+          {section === "bp" ? "Your blood pressure, over time" : section === "walk" ? "Track a walk" : "Guided breathing"}
+        </h1>
+
+        {/* Section switcher */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <SectionCard
+            icon={<HeartPulse size={22} color={section === "bp" ? "#fff" : "#C75146"} />}
+            label="BP Log"
+            active={section === "bp"}
+            onClick={() => setSection("bp")}
+          />
+          <SectionCard
+            icon={<Footprints size={22} color={section === "walk" ? "#fff" : "#3E7C8C"} />}
+            label="Walk"
+            active={section === "walk"}
+            onClick={() => setSection("walk")}
+          />
+          <SectionCard
+            icon={<Wind size={22} color={section === "breathe" ? "#fff" : "#4C8C6B"} />}
+            label="Breathe"
+            active={section === "breathe"}
+            onClick={() => setSection("breathe")}
+          />
+        </div>
+
+        {section === "bp" ? <BPTracker session={session} /> : section === "walk" ? <WalkTracker session={session} /> : <BreathingExercise />}
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({ icon, label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: "1 1 0",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        padding: "16px 10px",
+        borderRadius: 16,
+        border: active ? "1px solid #1B2B44" : "1px solid #DCE3DF",
+        background: active ? "#1B2B44" : "#FFFFFF",
+        cursor: "pointer",
+        boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+      }}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: active ? "rgba(255,255,255,0.15)" : "#EEF2F0",
+        }}
+      >
+        {icon}
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color: active ? "#fff" : "#1B2B44" }}>{label}</span>
+    </button>
+  );
 }
 
 function ResetPassword({ onDone }) {
@@ -411,53 +526,7 @@ function BPTracker({ session }) {
   const latestCat = latest ? classify(latest.sys, latest.dia) : null;
 
   return (
-    <div
-      style={{
-        fontFamily: "'Inter', sans-serif",
-        background: "#EEF2F0",
-        minHeight: "100%",
-        color: "#1B2B44",
-        padding: "28px 18px 60px",
-      }}
-    >
-      <div style={{ maxWidth: 780, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <HeartPulse size={22} color="#C75146" />
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
-              PRESSURE LOG
-            </span>
-          </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: "none",
-              border: "none",
-              color: "#4A5C6E",
-              fontSize: 12,
-              cursor: "pointer",
-              padding: "4px 8px",
-            }}
-          >
-            <LogOut size={14} /> Sign out
-          </button>
-        </div>
-        <h1
-          style={{
-            fontFamily: "'Fraunces', serif",
-            fontSize: "clamp(28px, 5vw, 40px)",
-            fontWeight: 600,
-            margin: "4px 0 24px",
-            color: "#1B2B44",
-          }}
-        >
-          Your blood pressure, over time
-        </h1>
-
+    <>
         {/* Hero: Gauge + latest */}
         <div
           style={{
@@ -731,10 +800,9 @@ function BPTracker({ session }) {
         <div style={{ textAlign: "center", fontSize: 11, color: "#8C9A94", marginTop: 24 }}>
           Categories follow American Heart Association guidelines. This is a personal log, not medical advice.
         </div>
-      </div>
 
       {alertReading && <AdviceModal reading={alertReading} onClose={() => setAlertReading(null)} />}
-    </div>
+    </>
   );
 }
 
@@ -892,6 +960,463 @@ function AdviceModal({ reading, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// --- Haversine distance in km between two lat/lng points ---
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function fmtDuration(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1;
+    window.speechSynthesis.speak(u);
+  } catch (err) {
+    console.error("Speech synthesis failed", err);
+  }
+}
+
+function WalkTracker({ session }) {
+  const [tracking, setTracking] = useState(false);
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [seconds, setSeconds] = useState(0);
+  const [gpsError, setGpsError] = useState("");
+  const [walks, setWalks] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const watchIdRef = useRef(null);
+  const lastPosRef = useRef(null);
+  const nextAnnounceRef = useRef(0.5);
+  const timerRef = useRef(null);
+  const startedAtRef = useRef(null);
+
+  const loadWalks = async () => {
+    const { data, error } = await supabase
+      .from("walks")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(20);
+    if (error) {
+      console.error("Failed to load walks", error);
+    } else {
+      setWalks(data);
+    }
+    setLoaded(true);
+  };
+
+  useEffect(() => {
+    loadWalks();
+    return () => {
+      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startWalk = () => {
+    if (!("geolocation" in navigator)) {
+      setGpsError("Your browser doesn't support GPS location.");
+      return;
+    }
+    setGpsError("");
+    setDistanceKm(0);
+    setSeconds(0);
+    lastPosRef.current = null;
+    nextAnnounceRef.current = 0.5;
+    startedAtRef.current = new Date();
+    setTracking(true);
+
+    timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const cur = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (lastPosRef.current) {
+          // Ignore jumps from poor-accuracy GPS noise while stationary
+          if (!pos.coords.accuracy || pos.coords.accuracy < 30) {
+            const d = haversineKm(lastPosRef.current, cur);
+            if (d > 0.002) {
+              setDistanceKm((prev) => {
+                const next = prev + d;
+                if (next >= nextAnnounceRef.current) {
+                  speak(`${nextAnnounceRef.current.toFixed(1)} kilometers`);
+                  nextAnnounceRef.current += 0.5;
+                }
+                return next;
+              });
+              lastPosRef.current = cur;
+            }
+          }
+        } else {
+          lastPosRef.current = cur;
+        }
+      },
+      (err) => {
+        console.error("GPS error", err);
+        setGpsError(err.message || "Couldn't access your location. Check location permissions.");
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+    );
+  };
+
+  const stopWalk = async () => {
+    if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTracking(false);
+    speak(`Walk finished. ${distanceKm.toFixed(2)} kilometers.`);
+
+    if (distanceKm > 0.01) {
+      setSaving(true);
+      const { error } = await supabase.from("walks").insert({
+        user_id: session.user.id,
+        distance_km: Number(distanceKm.toFixed(3)),
+        duration_s: seconds,
+        started_at: startedAtRef.current.toISOString(),
+        ended_at: new Date().toISOString(),
+      });
+      setSaving(false);
+      if (error) {
+        console.error("Failed to save walk", error);
+        setGpsError("Walk finished but couldn't be saved: " + error.message);
+      } else {
+        loadWalks();
+      }
+    }
+  };
+
+  const paceMinPerKm = distanceKm > 0.01 ? seconds / 60 / distanceKm : null;
+
+  return (
+    <>
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 20,
+          padding: "24px 20px",
+          boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+          marginBottom: 20,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "center", marginBottom: 4 }}>
+          <Footprints size={18} color="#3E7C8C" />
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>Walking session</span>
+        </div>
+
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 44, fontWeight: 600, margin: "18px 0 2px", color: "#1B2B44" }}>
+          {distanceKm.toFixed(2)} <span style={{ fontSize: 18, fontWeight: 500, color: "#4A5C6E" }}>km</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 20 }}>
+          <Stat label="Time" value={fmtDuration(seconds)} />
+          <Stat label="Pace" value={paceMinPerKm ? `${paceMinPerKm.toFixed(1)} min/km` : "--"} />
+        </div>
+
+        {gpsError && <div style={{ color: "#C75146", fontSize: 13, marginBottom: 14 }}>{gpsError}</div>}
+
+        {!tracking ? (
+          <button
+            onClick={startWalk}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#1B2B44",
+              color: "#fff",
+              border: "none",
+              borderRadius: 999,
+              padding: "13px 28px",
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Play size={16} /> Start walk
+          </button>
+        ) : (
+          <button
+            onClick={stopWalk}
+            disabled={saving}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#C75146",
+              color: "#fff",
+              border: "none",
+              borderRadius: 999,
+              padding: "13px 28px",
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: saving ? "default" : "pointer",
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            <Square size={16} /> {saving ? "Saving…" : "Stop walk"}
+          </button>
+        )}
+
+        <div style={{ fontSize: 11, color: "#8C9A94", marginTop: 16 }}>
+          Uses your phone's GPS while this page is open. Distance is announced every 0.5 km. Keep this tab open and your screen on for the most accurate tracking.
+        </div>
+      </div>
+
+      {/* History */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 20,
+          padding: "22px 20px",
+          boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <Calendar size={17} color="#1B2B44" />
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>Walk history</span>
+        </div>
+        {!loaded ? (
+          <div style={{ color: "#4A5C6E", fontSize: 14 }}>Loading…</div>
+        ) : walks.length === 0 ? (
+          <div style={{ color: "#4A5C6E", fontSize: 14 }}>Your walks will appear here.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {walks.map((w) => (
+              <div
+                key={w.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 6px",
+                  borderBottom: "1px solid #EEF1EF",
+                }}
+              >
+                <Footprints size={16} color="#3E7C8C" style={{ flex: "0 0 auto" }} />
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 16, fontWeight: 600, width: 80, flex: "0 0 auto" }}>
+                  {Number(w.distance_km).toFixed(2)} km
+                </div>
+                <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: "#1B2B44" }}>{fmtDateFull(w.started_at)}</div>
+                  <div style={{ fontSize: 12, color: "#4A5C6E" }}>{fmtDuration(w.duration_s)} min</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// --- Breathing patterns: [phase label, seconds] ---
+const BREATH_PATTERNS = {
+  box: { label: "Box breathing (4-4-4-4)", phases: [["Inhale", 4], ["Hold", 4], ["Exhale", 4], ["Hold", 4]] },
+  calm: { label: "4-7-8 relaxing breath", phases: [["Inhale", 4], ["Hold", 7], ["Exhale", 8]] },
+  simple: { label: "Simple 4-6", phases: [["Inhale", 4], ["Exhale", 6]] },
+};
+
+function BreathingExercise() {
+  const [patternKey, setPatternKey] = useState("box");
+  const [running, setRunning] = useState(false);
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(BREATH_PATTERNS.box.phases[0][1]);
+  const [cycles, setCycles] = useState(0);
+  const [voiceOn, setVoiceOn] = useState(true);
+
+  const timerRef = useRef(null);
+  const phaseIdxRef = useRef(0);
+  const pattern = BREATH_PATTERNS[patternKey];
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  const announcePhase = (label) => {
+    if (voiceOn) speak(label);
+  };
+
+  const start = () => {
+    setRunning(true);
+    phaseIdxRef.current = 0;
+    setPhaseIdx(0);
+    setCycles(0);
+    setSecondsLeft(pattern.phases[0][1]);
+    announcePhase(pattern.phases[0][0]);
+
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s > 1) return s - 1;
+        const nextIdx = (phaseIdxRef.current + 1) % pattern.phases.length;
+        phaseIdxRef.current = nextIdx;
+        setPhaseIdx(nextIdx);
+        if (nextIdx === 0) setCycles((c) => c + 1);
+        announcePhase(pattern.phases[nextIdx][0]);
+        return pattern.phases[nextIdx][1];
+      });
+    }, 1000);
+  };
+
+  const stop = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    window.speechSynthesis?.cancel();
+    setRunning(false);
+  };
+
+  const changePattern = (key) => {
+    stop();
+    setPatternKey(key);
+    phaseIdxRef.current = 0;
+    setPhaseIdx(0);
+    setSecondsLeft(BREATH_PATTERNS[key].phases[0][1]);
+    setCycles(0);
+  };
+
+  const currentPhase = pattern.phases[phaseIdx];
+  const scale = currentPhase[0] === "Inhale" ? 1.15 : currentPhase[0] === "Exhale" ? 0.85 : 1;
+
+  return (
+    <>
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 20,
+          padding: "24px 20px",
+          boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+          marginBottom: 20,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "center", marginBottom: 4 }}>
+          <Wind size={18} color="#4C8C6B" />
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>Guided breathing</span>
+        </div>
+        <div style={{ fontSize: 12, color: "#4A5C6E", marginBottom: 18 }}>
+          A relaxation exercise, not a lung function test — for an actual breathing or lung assessment, see a clinician (spirometry).
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", marginBottom: 22 }}>
+          {Object.entries(BREATH_PATTERNS).map(([key, p]) => (
+            <button
+              key={key}
+              onClick={() => changePattern(key)}
+              disabled={running}
+              style={{
+                fontSize: 12,
+                padding: "6px 12px",
+                borderRadius: 999,
+                border: "1px solid " + (patternKey === key ? "#1B2B44" : "#DCE3DF"),
+                background: patternKey === key ? "#1B2B44" : "transparent",
+                color: patternKey === key ? "#fff" : "#4A5C6E",
+                cursor: running ? "default" : "pointer",
+                opacity: running && patternKey !== key ? 0.5 : 1,
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          style={{
+            width: 180,
+            height: 180,
+            margin: "0 auto 20px",
+            borderRadius: "50%",
+            background: "#EAF3EE",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform: `scale(${running ? scale : 1})`,
+            transition: "transform 3.5s ease-in-out",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: "#1B2B44" }}>
+              {running ? currentPhase[0] : "Ready"}
+            </div>
+            {running && <div style={{ fontSize: 28, fontWeight: 600, color: "#4C8C6B", marginTop: 4 }}>{secondsLeft}</div>}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 13, color: "#4A5C6E", marginBottom: 18 }}>Cycles completed: {cycles}</div>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+          {!running ? (
+            <button
+              onClick={start}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#1B2B44",
+                color: "#fff",
+                border: "none",
+                borderRadius: 999,
+                padding: "13px 28px",
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Play size={16} /> Start
+            </button>
+          ) : (
+            <button
+              onClick={stop}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#C75146",
+                color: "#fff",
+                border: "none",
+                borderRadius: 999,
+                padding: "13px 28px",
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Square size={16} /> Stop
+            </button>
+          )}
+          <button
+            onClick={() => setVoiceOn((v) => !v)}
+            style={{
+              fontSize: 13,
+              padding: "13px 16px",
+              borderRadius: 999,
+              border: "1px solid #DCE3DF",
+              background: voiceOn ? "#EEF2F0" : "transparent",
+              color: "#4A5C6E",
+              cursor: "pointer",
+            }}
+          >
+            {voiceOn ? "Voice: on" : "Voice: off"}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
