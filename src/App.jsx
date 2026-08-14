@@ -1,17 +1,94 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut } from "lucide-react";
+import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info, Copy, Check } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import Auth from "./Auth";
 
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
-  if (sys >= 180 || dia >= 120) return { key: "crisis", label: "Hypertensive Crisis", color: "#8B2E3C", advice: "Seek medical attention promptly." };
-  if (sys >= 140 || dia >= 90) return { key: "stage2", label: "High Blood Pressure — Stage 2", color: "#C75146", advice: "Talk with a clinician about treatment." };
-  if (sys >= 130 || dia >= 80) return { key: "stage1", label: "High Blood Pressure — Stage 1", color: "#D97B4F", advice: "Lifestyle changes recommended; monitor closely." };
-  if (sys >= 120 && dia < 80) return { key: "elevated", label: "Elevated", color: "#D9A544", advice: "A good time to focus on healthy habits." };
-  if (sys < 120 && dia < 80) return { key: "normal", label: "Normal", color: "#4C8C6B", advice: "Keep up the good work." };
-  return { key: "normal", label: "Normal", color: "#4C8C6B", advice: "Keep up the good work." };
+  if (sys >= 180 || dia >= 120) {
+    return {
+      key: "crisis",
+      label: "Hypertensive Crisis",
+      color: "#8B2E3C",
+      advice: "Seek medical attention promptly.",
+      urgent: true,
+      steps: [
+        "Sit down and rest calmly — don't drive yourself anywhere.",
+        "Wait 5 minutes and take a second reading to confirm.",
+        "If it's still this high, or you have chest pain, shortness of breath, a severe headache, vision changes, or numbness/weakness, call emergency services or go to the ER immediately.",
+        "Do not take an extra dose of any medication without a doctor's instruction.",
+      ],
+    };
+  }
+  if (sys >= 140 || dia >= 90) {
+    return {
+      key: "stage2",
+      label: "High Blood Pressure — Stage 2",
+      color: "#C75146",
+      advice: "Talk with a clinician about treatment.",
+      urgent: false,
+      steps: [
+        "Rest quietly for a few minutes, then recheck to rule out a one-off spike.",
+        "Note any symptoms — headache, dizziness, chest discomfort.",
+        "If readings are repeatedly in this range, contact a doctor soon to discuss treatment.",
+        "Cut back on salt, caffeine, and alcohol for the rest of the day.",
+      ],
+    };
+  }
+  if (sys >= 130 || dia >= 80) {
+    return {
+      key: "stage1",
+      label: "High Blood Pressure — Stage 1",
+      color: "#D97B4F",
+      advice: "Lifestyle changes recommended; monitor closely.",
+      urgent: false,
+      steps: [
+        "Recheck after a short rest to confirm the reading.",
+        "Cut back on salt, caffeine, and alcohol today.",
+        "Get some light movement in if you haven't already — a short walk can help.",
+        "Keep logging readings so you and your doctor can spot a pattern.",
+      ],
+    };
+  }
+  if (sys >= 120 && dia < 80) {
+    return {
+      key: "elevated",
+      label: "Elevated",
+      color: "#D9A544",
+      advice: "A good time to focus on healthy habits.",
+      urgent: false,
+      steps: [
+        "No action needed right now.",
+        "Keep an eye on salt intake and stay active.",
+        "Continue logging so you can track the trend over time.",
+      ],
+    };
+  }
+  if (sys < 90 || dia < 60) {
+    return {
+      key: "low",
+      label: "Low Blood Pressure",
+      color: "#3E7C8C",
+      advice: "Take it easy and recheck shortly.",
+      urgent: sys < 80 || dia < 50,
+      steps: [
+        "Sit or lie down right away, especially if you feel lightheaded or dizzy.",
+        "If lying down, raise your legs slightly to help blood flow to your head.",
+        "Sip water — dehydration is a common cause of low readings.",
+        "Stand up slowly next time you get up to avoid a dizzy spell.",
+        "If you feel faint, confused, have cold/clammy skin, or chest pain, seek medical help right away.",
+      ],
+    };
+  }
+  return {
+    key: "normal",
+    label: "Normal",
+    color: "#4C8C6B",
+    advice: "Keep up the good work.",
+    urgent: false,
+    steps: ["No action needed — this reading is in the normal range.", "Keep up your current habits."],
+  };
 }
 
 function fmtDateShort(iso) {
@@ -85,10 +162,12 @@ const RANGE_OPTIONS = [
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+  const [recovery, setRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
       setSession(sess);
     });
     return () => listener.subscription.unsubscribe();
@@ -102,9 +181,131 @@ export default function App() {
     );
   }
 
+  if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
 
   return <BPTracker session={session} />;
+}
+
+function ResetPassword({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (error) {
+      setError(error.message || "Something went wrong.");
+      return;
+    }
+    setDone(true);
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        background: "#EEF2F0",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 20,
+          padding: "32px 28px",
+          boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
+          width: "100%",
+          maxWidth: 380,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <HeartPulse size={22} color="#C75146" />
+          <span style={{ fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>PRESSURE LOG</span>
+        </div>
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600, margin: "4px 0 20px", color: "#1B2B44" }}>
+          Set a new password
+        </h1>
+
+        {done ? (
+          <>
+            <div style={{ color: "#4C8C6B", fontSize: 14, marginBottom: 18 }}>
+              Your password has been updated.
+            </div>
+            <button
+              onClick={onDone}
+              style={{
+                width: "100%",
+                background: "#1B2B44",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                padding: "11px 20px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Continue
+            </button>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#4A5C6E", marginBottom: 5 }}>New password</div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #DCE3DF",
+                  fontSize: 14,
+                  color: "#1B2B44",
+                  outline: "none",
+                  background: "#FBFCFB",
+                }}
+                placeholder="At least 6 characters"
+              />
+            </label>
+            {error && <div style={{ color: "#C75146", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+            <button
+              type="submit"
+              disabled={busy}
+              style={{
+                width: "100%",
+                background: "#1B2B44",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                padding: "11px 20px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: busy ? "default" : "pointer",
+                opacity: busy ? 0.7 : 1,
+              }}
+            >
+              {busy ? "Please wait…" : "Update password"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function BPTracker({ session }) {
@@ -119,6 +320,7 @@ function BPTracker({ session }) {
     note: "",
   });
   const [error, setError] = useState("");
+  const [alertReading, setAlertReading] = useState(null);
 
   const loadReadings = async () => {
     const { data, error } = await supabase
@@ -160,6 +362,11 @@ function BPTracker({ session }) {
     }
     setForm({ ...form, systolic: "", diastolic: "", pulse: "", note: "" });
     loadReadings();
+
+    const cat = classify(sys, dia);
+    if (cat.key !== "normal" && cat.key !== "elevated") {
+      setAlertReading({ sys, dia, cat });
+    }
   };
 
   const deleteReading = async (id) => {
@@ -495,13 +702,25 @@ function BPTracker({ session }) {
                         {r.note ? ` · ${r.note}` : ""}
                       </div>
                     </div>
-                    <button
-                      onClick={() => deleteReading(r.id)}
-                      aria-label="Delete reading"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#B7C0BC", padding: 6, flex: "0 0 auto" }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 2, flex: "0 0 auto" }}>
+                      {cat.key !== "normal" && cat.key !== "elevated" && (
+                        <button
+                          onClick={() => setAlertReading({ sys: r.sys, dia: r.dia, cat, when: r.when })}
+                          aria-label="View advice for this reading"
+                          title="View advice"
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8C9A94", padding: 6, display: "flex" }}
+                        >
+                          <Info size={16} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteReading(r.id)}
+                        aria-label="Delete reading"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#B7C0BC", padding: 6, display: "flex" }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -511,6 +730,165 @@ function BPTracker({ session }) {
 
         <div style={{ textAlign: "center", fontSize: 11, color: "#8C9A94", marginTop: 24 }}>
           Categories follow American Heart Association guidelines. This is a personal log, not medical advice.
+        </div>
+      </div>
+
+      {alertReading && <AdviceModal reading={alertReading} onClose={() => setAlertReading(null)} />}
+    </div>
+  );
+}
+
+function AdviceModal({ reading, onClose }) {
+  const { sys, dia, cat, when } = reading;
+  const [copied, setCopied] = useState(false);
+
+  const copyText = async () => {
+    const lines = [
+      `${sys}/${dia} — ${cat.label}${when ? ` (${fmtDateFull(when)})` : ""}`,
+      cat.advice,
+      "",
+      ...cat.steps.map((s, i) => `${i + 1}. ${s}`),
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(27,43,68,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 20,
+          padding: "26px 24px",
+          width: "100%",
+          maxWidth: 420,
+          boxShadow: "0 12px 40px rgba(27,43,68,0.25)",
+          border: cat.urgent ? `2px solid ${cat.color}` : "none",
+        }}
+      >
+        <div
+          style={{
+            display: "inline-block",
+            fontSize: 12,
+            fontWeight: 600,
+            padding: "4px 10px",
+            borderRadius: 999,
+            color: "#fff",
+            background: cat.color,
+            marginBottom: 12,
+          }}
+        >
+          {cat.label}
+        </div>
+        <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, margin: "0 0 4px", color: "#1B2B44" }}>
+          {sys}/{dia} — {cat.urgent ? "Please take action now" : "What to do"}
+        </h2>
+        {when && <div style={{ fontSize: 12, color: "#8C9A94", marginBottom: 4 }}>{fmtDateFull(when)}</div>}
+        <p style={{ fontSize: 13, color: "#4A5C6E", margin: "0 0 16px" }}>{cat.advice}</p>
+
+        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 10 }}>
+          {cat.steps.map((step, i) => (
+            <li key={i} style={{ display: "flex", gap: 10, fontSize: 14, color: "#1B2B44", lineHeight: 1.4 }}>
+              <span
+                style={{
+                  flex: "0 0 auto",
+                  width: 20,
+                  height: 20,
+                  borderRadius: 999,
+                  background: cat.urgent ? cat.color : "#EEF2F0",
+                  color: cat.urgent ? "#fff" : "#4A5C6E",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 1,
+                }}
+              >
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ul>
+
+        {cat.urgent && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "#FBEAEA",
+              color: "#8B2E3C",
+              fontSize: 12.5,
+              fontWeight: 600,
+            }}
+          >
+            If symptoms are severe, don't wait — call emergency services now.
+          </div>
+        )}
+
+        <div style={{ marginTop: 18, fontSize: 11, color: "#8C9A94" }}>
+          This is general guidance, not medical advice. When in doubt, contact a clinician.
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button
+            onClick={copyText}
+            style={{
+              flex: "0 0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#FFFFFF",
+              color: "#1B2B44",
+              border: "1px solid #DCE3DF",
+              borderRadius: 12,
+              padding: "11px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {copied ? <Check size={15} color="#4C8C6B" /> : <Copy size={15} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              flex: "1 1 auto",
+              background: "#1B2B44",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "11px 20px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Got it
+          </button>
         </div>
       </div>
     </div>

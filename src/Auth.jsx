@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 import { HeartPulse } from "lucide-react";
 
 export default function Auth() {
-  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,6 +19,12 @@ export default function Auth() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+      } else if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        setInfo("If an account exists for that email, a reset link is on its way. Check your inbox.");
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
@@ -59,11 +65,11 @@ export default function Auth() {
           <span style={{ fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>PRESSURE LOG</span>
         </div>
         <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600, margin: "4px 0 20px", color: "#1B2B44" }}>
-          {mode === "signin" ? "Welcome back" : "Create your account"}
+          {mode === "signin" ? "Welcome back" : mode === "forgot" ? "Reset your password" : "Create your account"}
         </h1>
 
         <form onSubmit={submit}>
-          <label style={{ display: "block", marginBottom: 12 }}>
+          <label style={{ display: "block", marginBottom: mode === "forgot" ? 16 : 12 }}>
             <div style={{ fontSize: 11, color: "#4A5C6E", marginBottom: 5 }}>Email</div>
             <input
               type="email"
@@ -74,18 +80,33 @@ export default function Auth() {
               placeholder="you@example.com"
             />
           </label>
-          <label style={{ display: "block", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "#4A5C6E", marginBottom: 5 }}>Password</div>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-              placeholder="At least 6 characters"
-            />
-          </label>
+
+          {mode !== "forgot" && (
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#4A5C6E", marginBottom: 5 }}>Password</div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={inputStyle}
+                placeholder="At least 6 characters"
+              />
+            </label>
+          )}
+
+          {mode === "signin" && (
+            <div style={{ textAlign: "right", marginTop: -8, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => { setMode("forgot"); setError(""); setInfo(""); }}
+                style={{ ...linkStyle, fontSize: 12 }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           {error && <div style={{ color: "#C75146", fontSize: 13, marginBottom: 12 }}>{error}</div>}
           {info && <div style={{ color: "#4C8C6B", fontSize: 13, marginBottom: 12 }}>{info}</div>}
@@ -106,25 +127,31 @@ export default function Auth() {
               opacity: busy ? 0.7 : 1,
             }}
           >
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}
+            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "forgot" ? "Send reset link" : "Sign up"}
           </button>
         </form>
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: "#4A5C6E" }}>
-          {mode === "signin" ? (
+          {mode === "signin" && (
             <>
               Don't have an account?{" "}
               <button onClick={() => { setMode("signup"); setError(""); setInfo(""); }} style={linkStyle}>
                 Sign up
               </button>
             </>
-          ) : (
+          )}
+          {mode === "signup" && (
             <>
               Already have an account?{" "}
               <button onClick={() => { setMode("signin"); setError(""); setInfo(""); }} style={linkStyle}>
                 Sign in
               </button>
             </>
+          )}
+          {mode === "forgot" && (
+            <button onClick={() => { setMode("signin"); setError(""); setInfo(""); }} style={linkStyle}>
+              Back to sign in
+            </button>
           )}
         </div>
         <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, color: "#8C9A94" }}>
