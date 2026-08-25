@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info, Copy, Check, Footprints, Play, Square, Wind } from "lucide-react";
+import { Plus, Trash2, Activity, HeartPulse, Calendar, TrendingUp, LogOut, Info, Copy, Check, Footprints, Play, Square, Wind, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import Auth from "./Auth";
+import { buildSpokenResult } from "./utils/buildSpokenResult";
+import { VoiceInputButton } from "./components/VoiceInputButton";
 
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
@@ -189,6 +191,7 @@ export default function App() {
 
 function Dashboard({ session }) {
   const [section, setSection] = useState("bp"); // "bp" | "walk" | "breathe"
+  const [uiLanguage, setUiLanguage] = useState("en"); // "en" | "ur"
 
   return (
     <div
@@ -209,22 +212,41 @@ function Dashboard({ session }) {
               PRESSURE LOG
             </span>
           </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: "none",
-              border: "none",
-              color: "#4A5C6E",
-              fontSize: 12,
-              cursor: "pointer",
-              padding: "4px 8px",
-            }}
-          >
-            <LogOut size={14} /> Sign out
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => setUiLanguage((l) => (l === "en" ? "ur" : "en"))}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "none",
+                border: "1px solid #DCE3DF",
+                borderRadius: 999,
+                color: "#4A5C6E",
+                fontSize: 12,
+                cursor: "pointer",
+                padding: "4px 10px",
+              }}
+            >
+              {uiLanguage === "en" ? "اردو" : "English"}
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "none",
+                border: "none",
+                color: "#4A5C6E",
+                fontSize: 12,
+                cursor: "pointer",
+                padding: "4px 8px",
+              }}
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
         </div>
         <h1
           style={{
@@ -260,7 +282,13 @@ function Dashboard({ session }) {
           />
         </div>
 
-        {section === "bp" ? <BPTracker session={session} /> : section === "walk" ? <WalkTracker session={session} /> : <BreathingExercise />}
+        {section === "bp" ? (
+          <BPTracker session={session} uiLanguage={uiLanguage} />
+        ) : section === "walk" ? (
+          <WalkTracker session={session} />
+        ) : (
+          <BreathingExercise />
+        )}
       </div>
     </div>
   );
@@ -423,7 +451,7 @@ function ResetPassword({ onDone }) {
   );
 }
 
-function BPTracker({ session }) {
+function BPTracker({ session, uiLanguage }) {
   const [readings, setReadings] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [range, setRange] = useState("30");
@@ -525,6 +553,8 @@ function BPTracker({ session }) {
   const latest = readings[0];
   const latestCat = latest ? classify(latest.sys, latest.dia) : null;
 
+  const voiceLang = uiLanguage === "ur" ? "ur-PK" : "en-US";
+
   return (
     <>
         {/* Hero: Gauge + latest */}
@@ -589,34 +619,43 @@ function BPTracker({ session }) {
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, marginBottom: 14 }}>Add a reading</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
             <Field label="Systolic">
-              <input
-                type="number"
-                inputMode="numeric"
-                placeholder="120"
-                value={form.systolic}
-                onChange={(e) => setForm({ ...form, systolic: e.target.value })}
-                style={inputStyle}
-              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="120"
+                  value={form.systolic}
+                  onChange={(e) => setForm({ ...form, systolic: e.target.value })}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <VoiceInputButton lang={voiceLang} onValue={(v) => setForm((f) => ({ ...f, systolic: v }))} />
+              </div>
             </Field>
             <Field label="Diastolic">
-              <input
-                type="number"
-                inputMode="numeric"
-                placeholder="80"
-                value={form.diastolic}
-                onChange={(e) => setForm({ ...form, diastolic: e.target.value })}
-                style={inputStyle}
-              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="80"
+                  value={form.diastolic}
+                  onChange={(e) => setForm({ ...form, diastolic: e.target.value })}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <VoiceInputButton lang={voiceLang} onValue={(v) => setForm((f) => ({ ...f, diastolic: v }))} />
+              </div>
             </Field>
             <Field label="Pulse (optional)">
-              <input
-                type="number"
-                inputMode="numeric"
-                placeholder="72"
-                value={form.pulse}
-                onChange={(e) => setForm({ ...form, pulse: e.target.value })}
-                style={inputStyle}
-              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="72"
+                  value={form.pulse}
+                  onChange={(e) => setForm({ ...form, pulse: e.target.value })}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <VoiceInputButton lang={voiceLang} onValue={(v) => setForm((f) => ({ ...f, pulse: v }))} />
+              </div>
             </Field>
             <Field label="When">
               <input
@@ -801,14 +840,17 @@ function BPTracker({ session }) {
           Categories follow American Heart Association guidelines. This is a personal log, not medical advice.
         </div>
 
-      {alertReading && <AdviceModal reading={alertReading} onClose={() => setAlertReading(null)} />}
+      {alertReading && (
+        <AdviceModal reading={alertReading} onClose={() => setAlertReading(null)} uiLanguage={uiLanguage} />
+      )}
     </>
   );
 }
 
-function AdviceModal({ reading, onClose }) {
+function AdviceModal({ reading, onClose, uiLanguage }) {
   const { sys, dia, cat, when } = reading;
   const [copied, setCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const copyText = async () => {
     const lines = [
@@ -824,6 +866,24 @@ function AdviceModal({ reading, onClose }) {
     } catch (err) {
       console.error("Copy failed", err);
     }
+  };
+
+  const speakResult = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const text = buildSpokenResult(sys, dia, cat, uiLanguage);
+    const langCode = uiLanguage === "ur" ? "ur-PK" : "en-US";
+    setSpeaking(true);
+    speak(text, langCode);
+    const check = setInterval(() => {
+      if (!window.speechSynthesis.speaking) {
+        setSpeaking(false);
+        clearInterval(check);
+      }
+    }, 300);
   };
 
   return (
@@ -920,7 +980,27 @@ function AdviceModal({ reading, onClose }) {
           This is general guidance, not medical advice. When in doubt, contact a clinician.
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+          <button
+            onClick={speakResult}
+            style={{
+              flex: "0 0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#FFFFFF",
+              color: "#1B2B44",
+              border: "1px solid #DCE3DF",
+              borderRadius: 12,
+              padding: "11px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {speaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {speaking ? "Stop" : "Listen"}
+          </button>
           <button
             onClick={copyText}
             style={{
@@ -981,12 +1061,13 @@ function fmtDuration(seconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function speak(text) {
+function speak(text, lang) {
   if (!("speechSynthesis" in window)) return;
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1;
+    if (lang) u.lang = lang;
     window.speechSynthesis.speak(u);
   } catch (err) {
     console.error("Speech synthesis failed", err);
