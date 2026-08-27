@@ -5,7 +5,7 @@ import { supabase } from "./supabaseClient";
 import Auth from "./Auth";
 import { buildSpokenResult } from "./utils/buildSpokenResult";
 import { VoiceInputButton } from "./components/VoiceInputButton";
-
+import { InstallAppButton } from "./components/InstallAppButton";
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
   if (sys >= 180 || dia >= 120) {
