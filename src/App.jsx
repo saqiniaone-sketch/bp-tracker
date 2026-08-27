@@ -213,6 +213,7 @@ function Dashboard({ session }) {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <InstallAppButton />
             <button
               onClick={() => setUiLanguage((l) => (l === "en" ? "ur" : "en"))}
               style={{
