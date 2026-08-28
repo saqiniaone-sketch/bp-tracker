@@ -11,7 +11,7 @@ function fmtDateFull(iso) {
 
 // Renders the Sugar detail page (history list) and owns the full-screen
 // "New record" flow. `session` is your existing Supabase auth session.
-export function SugarTracker({ session, showNewRecord, onCloseNewRecord, onSaved }) {
+export function SugarTracker({ session, showNewRecord, onCloseNewRecord, onSaved, showList = true }) {
   const [readings, setReadings] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -52,6 +52,7 @@ export function SugarTracker({ session, showNewRecord, onCloseNewRecord, onSaved
     <>
       {showNewRecord && <NewSugarRecordScreen onSave={handleSave} onClose={onCloseNewRecord} />}
 
+      {showList && (
       <div style={{ padding: "20px 16px 90px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <Calendar size={17} color="#fff" />
@@ -87,6 +88,7 @@ export function SugarTracker({ session, showNewRecord, onCloseNewRecord, onSaved
           </div>
         )}
       </div>
+      )}
     </>
   );
 }
