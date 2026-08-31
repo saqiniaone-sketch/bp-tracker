@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HelpCircle, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, X, ChevronDown, ChevronUp } from "lucide-react";
 import { FAQ_CONTENT, FAQ_LABELS } from "../utils/faqContent";
 
 // A floating help button (bottom-right) that opens a simple FAQ panel.
@@ -35,7 +35,7 @@ export function HelpButton({ uiLanguage }) {
           zIndex: 150,
         }}
       >
-        <HelpCircle size={26} color="#fff" />
+        <Bot size={28} color="#fff" />
       </button>
 
       {/* Panel */}
