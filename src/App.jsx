@@ -1121,6 +1121,37 @@ function speak(text, lang) {
   }
 }
 
+// A short rising two-note chime played when a walk starts, synthesized
+// with the Web Audio API so no audio file needs to be hosted.
+let walkAudioCtx = null;
+function playStartChime() {
+  try {
+    if (!walkAudioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      walkAudioCtx = new Ctx();
+    }
+    const ctx = walkAudioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+
+    [523.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.11);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.11);
+      gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + i * 0.11 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.11 + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.11);
+      osc.stop(ctx.currentTime + i * 0.11 + 0.25);
+    });
+  } catch (err) {
+    // Non-critical — walk tracking still works without the chime.
+  }
+}
+
 function WalkTracker({ session }) {
   const [tracking, setTracking] = useState(false);
   const [distanceKm, setDistanceKm] = useState(0);
@@ -1132,7 +1163,7 @@ function WalkTracker({ session }) {
 
   const watchIdRef = useRef(null);
   const lastPosRef = useRef(null);
-  const nextAnnounceRef = useRef(0.5);
+  const nextAnnounceRef = useRef(0.1);
   const timerRef = useRef(null);
   const startedAtRef = useRef(null);
 
@@ -1168,9 +1199,11 @@ function WalkTracker({ session }) {
     setDistanceKm(0);
     setSeconds(0);
     lastPosRef.current = null;
-    nextAnnounceRef.current = 0.5;
+    nextAnnounceRef.current = 0.1;
     startedAtRef.current = new Date();
     setTracking(true);
+    playStartChime();
+    speak("Walk started");
 
     timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
 
@@ -1185,8 +1218,13 @@ function WalkTracker({ session }) {
               setDistanceKm((prev) => {
                 const next = prev + d;
                 if (next >= nextAnnounceRef.current) {
-                  speak(`${nextAnnounceRef.current.toFixed(1)} kilometers`);
-                  nextAnnounceRef.current += 0.5;
+                  const meters = Math.round(nextAnnounceRef.current * 1000);
+                  const announcement =
+                    meters % 1000 === 0
+                      ? `You've completed ${meters / 1000} kilometer${meters / 1000 > 1 ? "s" : ""}`
+                      : `You've completed ${meters} meters`;
+                  speak(announcement);
+                  nextAnnounceRef.current += 0.1;
                 }
                 return next;
               });
