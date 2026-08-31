@@ -10,6 +10,7 @@ import { Home } from "./components/Home";
 import { SugarTracker } from "./components/SugarTracker";
 import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
 import { InfoDetail } from "./components/InfoDetail";
+import { HelpButton } from "./components/HelpButton";
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
   if (sys >= 180 || dia >= 120) {
@@ -338,6 +339,8 @@ function Dashboard({ session }) {
       />
 
       {infoTitle && <InfoDetail title={infoTitle} color={infoColor} onClose={() => setInfoTitle(null)} uiLanguage={uiLanguage} speak={speak} />}
+
+      <HelpButton uiLanguage={uiLanguage} />
     </div>
   );
 }
