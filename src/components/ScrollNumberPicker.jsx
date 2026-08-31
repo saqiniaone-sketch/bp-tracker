@@ -1,5 +1,33 @@
 import { useRef, useCallback } from "react";
 
+// Synthesizes a short, soft tick sound with the Web Audio API — no audio
+// file needed. Reuses one AudioContext across all pickers on the page.
+let sharedAudioCtx = null;
+function playTick() {
+  try {
+    if (!sharedAudioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      sharedAudioCtx = new Ctx();
+    }
+    const ctx = sharedAudioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.04);
+  } catch (err) {
+    // Audio isn't critical to the picker working — fail silently.
+  }
+}
+
 // A vertical scroll-wheel number picker, like the "New record" screens
 // in health apps: drag/scroll up-down to change the value, with faded
 // preview numbers above and below the selected one.
@@ -13,6 +41,7 @@ import { useRef, useCallback } from "react";
 export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 300, label, unit, accentColor = "#4C8C6B" }) {
   const containerRef = useRef(null);
   const dragState = useRef({ dragging: false, startY: 0, startVal: value });
+  const lastTickedValue = useRef(value);
 
   const decimals = step < 1 ? 1 : 0;
   const fmt = (v) => (decimals ? v.toFixed(1) : String(Math.round(v)));
@@ -20,6 +49,14 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
   const clamp = useCallback((v) => Math.min(max, Math.max(min, v)), [min, max]);
 
   const rowHeight = 46;
+
+  const commitChange = (next) => {
+    if (next !== lastTickedValue.current) {
+      playTick();
+      lastTickedValue.current = next;
+    }
+    onChange(next);
+  };
 
   const handlePointerDown = (e) => {
     dragState.current = {
@@ -34,7 +71,7 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
     const y = e.touches ? e.touches[0].clientY : e.clientY;
     const deltaRows = (y - dragState.current.startY) / rowHeight;
     const next = clamp(dragState.current.startVal + deltaRows * step);
-    onChange(Number(next.toFixed(decimals)));
+    commitChange(Number(next.toFixed(decimals)));
   };
 
   const handlePointerUp = () => {
@@ -44,7 +81,7 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
   const handleWheel = (e) => {
     e.preventDefault();
     const direction = e.deltaY > 0 ? -1 : 1;
-    onChange(clamp(Number((value + direction * step).toFixed(decimals))));
+    commitChange(clamp(Number((value + direction * step).toFixed(decimals))));
   };
 
   // Build 5 visible rows: 2 above, selected, 2 below
@@ -100,7 +137,7 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontWeight: isCenter ? 700 : 500,
                 fontSize: isCenter ? 30 : 20,
-                color: isCenter ? "#1B2B44" : "#B7C0BC",
+                color: isCenter ? "#fff" : "#5A6C88",
                 opacity: isCenter ? 1 : 1 - distance * 0.28,
               }}
             >
@@ -112,7 +149,7 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
         <button
           type="button"
           aria-label={`Increase ${label || "value"}`}
-          onClick={() => onChange(clamp(Number((value + step).toFixed(decimals))))}
+          onClick={() => commitChange(clamp(Number((value + step).toFixed(decimals))))}
           style={pickerBtnStyle("top")}
         >
           ▲
@@ -120,7 +157,7 @@ export function ScrollNumberPicker({ value, onChange, step = 1, min = 0, max = 3
         <button
           type="button"
           aria-label={`Decrease ${label || "value"}`}
-          onClick={() => onChange(clamp(Number((value - step).toFixed(decimals))))}
+          onClick={() => commitChange(clamp(Number((value - step).toFixed(decimals))))}
           style={pickerBtnStyle("bottom")}
         >
           ▼
