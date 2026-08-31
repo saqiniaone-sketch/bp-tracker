@@ -199,6 +199,7 @@ function Dashboard({ session }) {
   const [showNewBP, setShowNewBP] = useState(false);
   const [showNewSugar, setShowNewSugar] = useState(false);
   const [infoTitle, setInfoTitle] = useState(null);
+  const [infoColor, setInfoColor] = useState("#3E9E8F");
   const [latestBP, setLatestBP] = useState(null);
   const [latestSugar, setLatestSugar] = useState(null);
 
@@ -298,7 +299,7 @@ function Dashboard({ session }) {
             latestSugar={latestSugar}
             onRecordBP={() => setShowNewBP(true)}
             onRecordSugar={() => setShowNewSugar(true)}
-            onOpenInfo={setInfoTitle}
+            onOpenInfo={(t, c) => { setInfoTitle(t); setInfoColor(c || "#3E9E8F"); }}
           />
         ) : section === "bpDetail" ? (
           <BPTracker session={session} uiLanguage={uiLanguage} />
@@ -336,7 +337,7 @@ function Dashboard({ session }) {
         showList={false}
       />
 
-      {infoTitle && <InfoDetail title={infoTitle} onClose={() => setInfoTitle(null)} uiLanguage={uiLanguage} speak={speak} />}
+      {infoTitle && <InfoDetail title={infoTitle} color={infoColor} onClose={() => setInfoTitle(null)} uiLanguage={uiLanguage} speak={speak} />}
     </div>
   );
 }
