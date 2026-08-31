@@ -336,7 +336,7 @@ function Dashboard({ session }) {
         showList={false}
       />
 
-      {infoTitle && <InfoDetail title={infoTitle} onClose={() => setInfoTitle(null)} />}
+      {infoTitle && <InfoDetail title={infoTitle} onClose={() => setInfoTitle(null)} uiLanguage={uiLanguage} speak={speak} />}
     </div>
   );
 }
