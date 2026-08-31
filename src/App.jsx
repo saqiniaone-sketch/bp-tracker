@@ -6,6 +6,10 @@ import Auth from "./Auth";
 import { buildSpokenResult } from "./utils/buildSpokenResult";
 import { VoiceInputButton } from "./components/VoiceInputButton";
 import { InstallAppButton } from "./components/InstallAppButton";
+import { Home } from "./components/Home";
+import { SugarTracker } from "./components/SugarTracker";
+import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
+import { InfoDetail } from "./components/InfoDetail";
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
   if (sys >= 180 || dia >= 120) {
@@ -190,8 +194,13 @@ export default function App() {
 }
 
 function Dashboard({ session }) {
-  const [section, setSection] = useState("bp"); // "bp" | "walk" | "breathe"
+  const [section, setSection] = useState("home"); // "home" | "bp" | "walk" | "breathe"
   const [uiLanguage, setUiLanguage] = useState("en"); // "en" | "ur"
+  const [showNewBP, setShowNewBP] = useState(false);
+  const [showNewSugar, setShowNewSugar] = useState(false);
+  const [infoTitle, setInfoTitle] = useState(null);
+  const [latestBP, setLatestBP] = useState(null);
+  const [latestSugar, setLatestSugar] = useState(null);
 
   return (
     <div
@@ -258,16 +267,16 @@ function Dashboard({ session }) {
             color: "#1B2B44",
           }}
         >
-          {section === "bp" ? "Your blood pressure, over time" : section === "walk" ? "Track a walk" : "Guided breathing"}
+          {section === "home" ? "Home" : section === "bpDetail" ? "Your blood pressure, over time" : section === "walk" ? "Track a walk" : "Guided breathing"}
         </h1>
 
         {/* Section switcher */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           <SectionCard
-            icon={<HeartPulse size={22} color={section === "bp" ? "#fff" : "#C75146"} />}
-            label="BP Log"
-            active={section === "bp"}
-            onClick={() => setSection("bp")}
+            icon={<HeartPulse size={22} color={section === "home" || section === "bpDetail" ? "#fff" : "#C75146"} />}
+            label="Home"
+            active={section === "home" || section === "bpDetail"}
+            onClick={() => setSection("home")}
           />
           <SectionCard
             icon={<Footprints size={22} color={section === "walk" ? "#fff" : "#3E7C8C"} />}
@@ -283,7 +292,15 @@ function Dashboard({ session }) {
           />
         </div>
 
-        {section === "bp" ? (
+        {section === "home" ? (
+          <Home
+            latestBP={latestBP}
+            latestSugar={latestSugar}
+            onRecordBP={() => setShowNewBP(true)}
+            onRecordSugar={() => setShowNewSugar(true)}
+            onOpenInfo={setInfoTitle}
+          />
+        ) : section === "bpDetail" ? (
           <BPTracker session={session} uiLanguage={uiLanguage} />
         ) : section === "walk" ? (
           <WalkTracker session={session} />
@@ -291,6 +308,35 @@ function Dashboard({ session }) {
           <BreathingExercise />
         )}
       </div>
+
+      {showNewBP && (
+        <NewBPRecordScreen
+          classify={classify}
+          onClose={() => setShowNewBP(false)}
+          onSave={async ({ sys, dia, pulse, when, note }) => {
+            await supabase.from("readings").insert({
+              user_id: session.user.id,
+              sys,
+              dia,
+              pulse,
+              when_at: new Date(when).toISOString(),
+              note: note.trim(),
+            });
+            setLatestBP({ sys, dia });
+            setShowNewBP(false);
+          }}
+        />
+      )}
+
+      <SugarTracker
+        session={session}
+        showNewRecord={showNewSugar}
+        onCloseNewRecord={() => setShowNewSugar(false)}
+        onSaved={setLatestSugar}
+        showList={false}
+      />
+
+      {infoTitle && <InfoDetail title={infoTitle} onClose={() => setInfoTitle(null)} />}
     </div>
   );
 }
