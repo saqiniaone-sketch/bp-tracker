@@ -48,7 +48,7 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
         {INFO_CARDS.map((card, i) => (
           <button
             key={i}
-            onClick={() => onOpenInfo?.(card.title)}
+            onClick={() => onOpenInfo?.(card.title, card.color)}
             style={{
               display: "flex",
               alignItems: "center",
