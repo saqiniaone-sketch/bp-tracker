@@ -6,6 +6,7 @@ import Auth from "./Auth";
 import { buildSpokenResult } from "./utils/buildSpokenResult";
 import { VoiceInputButton } from "./components/VoiceInputButton";
 import { InstallAppButton } from "./components/InstallAppButton";
+import { LanguagePicker } from "./components/LanguagePicker";
 import { Home } from "./components/Home";
 import { SugarTracker } from "./components/SugarTracker";
 import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
@@ -170,6 +171,13 @@ const RANGE_OPTIONS = [
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
   const [recovery, setRecovery] = useState(false);
+  const [langChosen, setLangChosen] = useState(() => {
+    try {
+      return localStorage.getItem("pl_lang_chosen") || null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -179,6 +187,13 @@ export default function App() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const handleLanguageSelect = (lang) => {
+    try {
+      localStorage.setItem("pl_lang_chosen", lang);
+    } catch {}
+    setLangChosen(lang);
+  };
 
   if (session === undefined) {
     return (
@@ -190,13 +205,14 @@ export default function App() {
 
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
   if (!session) return <Auth />;
+  if (!langChosen) return <LanguagePicker onSelect={handleLanguageSelect} />;
 
-  return <Dashboard session={session} />;
+  return <Dashboard session={session} initialLanguage={langChosen} />;
 }
 
-function Dashboard({ session }) {
+function Dashboard({ session, initialLanguage }) {
   const [section, setSection] = useState("home"); // "home" | "bp" | "walk" | "breathe"
-  const [uiLanguage, setUiLanguage] = useState("en"); // "en" | "ur"
+  const [uiLanguage, setUiLanguage] = useState(initialLanguage || "en"); // "en" | "ur"
   const [showNewBP, setShowNewBP] = useState(false);
   const [showNewSugar, setShowNewSugar] = useState(false);
   const [infoTitle, setInfoTitle] = useState(null);
@@ -210,9 +226,9 @@ function Dashboard({ session }) {
     <div
       style={{
         fontFamily: "'Inter', sans-serif",
-        background: isDarkSection ? "#1B2B44" : "#EEF2F0",
+        background: isDarkSection ? "#EAF4FB" : "#EEF2F0",
         minHeight: "100%",
-        color: isDarkSection ? "#fff" : "#1B2B44",
+        color: "#1B2B44",
         padding: "28px 18px 60px",
         transition: "background 0.2s ease",
       }}
@@ -222,7 +238,7 @@ function Dashboard({ session }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <HeartPulse size={22} color="#C75146" />
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: isDarkSection ? "#8C9AB8" : "#8C9A94", fontWeight: 800 }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#7C93B0", fontWeight: 800 }}>
               PRESSURE LOG
             </span>
           </div>
@@ -235,9 +251,9 @@ function Dashboard({ session }) {
                 alignItems: "center",
                 gap: 6,
                 background: "none",
-                border: `1px solid ${isDarkSection ? "#3A4C68" : "#DCE3DF"}`,
+                border: `1px solid ${isDarkSection ? "#BBDCF5" : "#DCE3DF"}`,
                 borderRadius: 999,
-                color: isDarkSection ? "#B7C3D6" : "#4A5C6E",
+                color: "#3E6FA8",
                 fontSize: 12,
                 cursor: "pointer",
                 padding: "4px 10px",
@@ -253,7 +269,7 @@ function Dashboard({ session }) {
                 gap: 6,
                 background: "none",
                 border: "none",
-                color: isDarkSection ? "#B7C3D6" : "#4A5C6E",
+                color: "#3E6FA8",
                 fontSize: 12,
                 cursor: "pointer",
                 padding: "4px 8px",
@@ -269,7 +285,7 @@ function Dashboard({ session }) {
             fontSize: "clamp(28px, 5vw, 40px)",
             fontWeight: 600,
             margin: "4px 0 20px",
-            color: isDarkSection ? "#fff" : "#1B2B44",
+            color: "#1B2B44",
           }}
         >
           {section === "home" ? "Home" : section === "bpDetail" ? "Your blood pressure, over time" : section === "walk" ? "Track a walk" : "Guided breathing"}
