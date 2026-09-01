@@ -9,6 +9,7 @@ import { InstallAppButton } from "./components/InstallAppButton";
 import { LanguagePicker } from "./components/LanguagePicker";
 import { Home } from "./components/Home";
 import { SugarTracker } from "./components/SugarTracker";
+import { WeightTracker } from "./components/WeightTracker";
 import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
 import { InfoDetail } from "./components/InfoDetail";
 import { HelpButton } from "./components/HelpButton";
@@ -215,10 +216,12 @@ function Dashboard({ session, initialLanguage }) {
   const [uiLanguage, setUiLanguage] = useState(initialLanguage || "en"); // "en" | "ur"
   const [showNewBP, setShowNewBP] = useState(false);
   const [showNewSugar, setShowNewSugar] = useState(false);
+  const [showNewWeight, setShowNewWeight] = useState(false);
   const [infoTitle, setInfoTitle] = useState(null);
   const [infoColor, setInfoColor] = useState("#3E9E8F");
   const [latestBP, setLatestBP] = useState(null);
   const [latestSugar, setLatestSugar] = useState(null);
+  const [latestWeight, setLatestWeight] = useState(null);
 
   const isDarkSection = section === "home";
 
@@ -317,8 +320,10 @@ function Dashboard({ session, initialLanguage }) {
           <Home
             latestBP={latestBP}
             latestSugar={latestSugar}
+            latestWeight={latestWeight}
             onRecordBP={() => setShowNewBP(true)}
             onRecordSugar={() => setShowNewSugar(true)}
+            onRecordWeight={() => setShowNewWeight(true)}
             onOpenInfo={(t, c) => { setInfoTitle(t); setInfoColor(c || "#3E9E8F"); }}
           />
         ) : section === "bpDetail" ? (
@@ -354,6 +359,14 @@ function Dashboard({ session, initialLanguage }) {
         showNewRecord={showNewSugar}
         onCloseNewRecord={() => setShowNewSugar(false)}
         onSaved={setLatestSugar}
+        showList={false}
+      />
+
+      <WeightTracker
+        session={session}
+        showNewRecord={showNewWeight}
+        onCloseNewRecord={() => setShowNewWeight(false)}
+        onSaved={setLatestWeight}
         showList={false}
       />
 
