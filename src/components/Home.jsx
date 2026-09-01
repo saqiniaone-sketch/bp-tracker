@@ -1,10 +1,8 @@
 import { HeartPulse, Droplet, ChevronRight, Gauge, Search, Home as HomeIcon, Footprints, Baby, UtensilsCrossed, Ban, Salad, ClipboardList } from "lucide-react";
 
-// Matches the "HOME" screen you shared: two record cards side by side,
-// then a scrollable list of colorful "Info & Knowledge" cards, each with
-// a small circular icon illustrating the topic.
-// Pass in latestBP ({sys, dia} or null) and latestSugar ({value} or null).
-
+// Matches your app's existing light theme (white cards, light gray page,
+// navy text) — the colorful Info & Knowledge cards keep white text since
+// their backgrounds are saturated enough for good contrast.
 const INFO_CARDS = [
   { title: "Normal Range of Blood Pressure", color: "#3E9E8F", icon: Gauge },
   { title: "What is Blood Pressure?", color: "#E0B02E", icon: HeartPulse },
@@ -20,22 +18,18 @@ const INFO_CARDS = [
 
 export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenInfo }) {
   return (
-    <div style={{ padding: "20px 16px 90px" }}>
-      <h1 style={{ fontFamily: "'Fraunces', 'Georgia', serif", fontSize: 28, fontWeight: 900, color: "#fff", margin: "0 0 18px" }}>
-        HOME
-      </h1>
-
+    <div style={{ padding: "4px 0 90px" }}>
       {/* Two record cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
         <RecordCard
-          icon={<HeartPulse size={30} color="#3E7C8C" />}
+          icon={<HeartPulse size={28} color="#C75146" />}
           title="Blood Pressure"
           value={latestBP ? `${latestBP.sys}/${latestBP.dia}` : "--/--"}
           unit="mmHg"
           onRecord={onRecordBP}
         />
         <RecordCard
-          icon={<Droplet size={30} color="#3E7C8C" />}
+          icon={<Droplet size={28} color="#3E7C8C" />}
           title="Blood Sugar"
           value={latestSugar ? latestSugar.value : "--"}
           unit="mg/dL"
@@ -44,7 +38,9 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
       </div>
 
       {/* Info & Knowledge */}
-      <div style={{ fontSize: 19, fontWeight: 900, color: "#fff", marginBottom: 12, fontFamily: "'Inter', sans-serif" }}>Info & Knowledge</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: "#1B2B44", marginBottom: 12, fontFamily: "'Fraunces', 'Georgia', serif" }}>
+        Info & Knowledge
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {INFO_CARDS.map((card, i) => {
           const Icon = card.icon;
@@ -63,6 +59,7 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
                 padding: "16px 16px 16px 18px",
                 textAlign: "left",
                 cursor: "pointer",
+                boxShadow: "0 1px 3px rgba(27,43,68,0.12)",
               }}
             >
               <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", flex: 1 }}>{card.title}</span>
@@ -71,7 +68,7 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
                   width: 44,
                   height: 44,
                   borderRadius: "50%",
-                  background: "rgba(255,255,255,0.22)",
+                  background: "rgba(255,255,255,0.25)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -94,13 +91,14 @@ function RecordCard({ icon, title, value, unit, onRecord }) {
     <div
       style={{
         flex: 1,
-        background: "#2B3B54",
+        background: "#FFFFFF",
         borderRadius: 18,
         padding: "20px 14px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 10,
+        boxShadow: "0 1px 3px rgba(27,43,68,0.08)",
       }}
     >
       <div
@@ -108,7 +106,7 @@ function RecordCard({ icon, title, value, unit, onRecord }) {
           width: 56,
           height: 56,
           borderRadius: 14,
-          background: "#3A4C68",
+          background: "#EEF2F0",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -116,15 +114,15 @@ function RecordCard({ icon, title, value, unit, onRecord }) {
       >
         {icon}
       </div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", textAlign: "center" }}>{title}</div>
-      <div style={{ fontSize: 15, color: "#B7C3D6" }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#1B2B44", textAlign: "center" }}>{title}</div>
+      <div style={{ fontSize: 15, color: "#4A5C6E" }}>
         {value} <span style={{ fontSize: 12 }}>{unit}</span>
       </div>
       <button
         onClick={onRecord}
         style={{
           width: "100%",
-          background: "#3E7FDB",
+          background: "#1B2B44",
           color: "#fff",
           border: "none",
           borderRadius: 12,
