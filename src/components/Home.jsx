@@ -21,7 +21,7 @@ const INFO_CARDS = [
 export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenInfo }) {
   return (
     <div style={{ padding: "20px 16px 90px" }}>
-      <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 700, color: "#fff", margin: "0 0 18px" }}>
+      <h1 style={{ fontFamily: "'Fraunces', 'Georgia', serif", fontSize: 28, fontWeight: 900, color: "#fff", margin: "0 0 18px" }}>
         HOME
       </h1>
 
@@ -44,7 +44,7 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
       </div>
 
       {/* Info & Knowledge */}
-      <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>Info & Knowledge</div>
+      <div style={{ fontSize: 19, fontWeight: 900, color: "#fff", marginBottom: 12, fontFamily: "'Inter', sans-serif" }}>Info & Knowledge</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {INFO_CARDS.map((card, i) => {
           const Icon = card.icon;
