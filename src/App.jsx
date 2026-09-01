@@ -204,14 +204,17 @@ function Dashboard({ session }) {
   const [latestBP, setLatestBP] = useState(null);
   const [latestSugar, setLatestSugar] = useState(null);
 
+  const isDarkSection = section === "home";
+
   return (
     <div
       style={{
         fontFamily: "'Inter', sans-serif",
-        background: "#EEF2F0",
+        background: isDarkSection ? "#1B2B44" : "#EEF2F0",
         minHeight: "100%",
-        color: "#1B2B44",
+        color: isDarkSection ? "#fff" : "#1B2B44",
         padding: "28px 18px 60px",
+        transition: "background 0.2s ease",
       }}
     >
       <div style={{ maxWidth: 780, margin: "0 auto" }}>
@@ -219,7 +222,7 @@ function Dashboard({ session }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <HeartPulse size={22} color="#C75146" />
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#8C9A94", fontWeight: 800 }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: isDarkSection ? "#8C9AB8" : "#8C9A94", fontWeight: 800 }}>
               PRESSURE LOG
             </span>
           </div>
@@ -232,9 +235,9 @@ function Dashboard({ session }) {
                 alignItems: "center",
                 gap: 6,
                 background: "none",
-                border: "1px solid #DCE3DF",
+                border: `1px solid ${isDarkSection ? "#3A4C68" : "#DCE3DF"}`,
                 borderRadius: 999,
-                color: "#4A5C6E",
+                color: isDarkSection ? "#B7C3D6" : "#4A5C6E",
                 fontSize: 12,
                 cursor: "pointer",
                 padding: "4px 10px",
@@ -250,7 +253,7 @@ function Dashboard({ session }) {
                 gap: 6,
                 background: "none",
                 border: "none",
-                color: "#4A5C6E",
+                color: isDarkSection ? "#B7C3D6" : "#4A5C6E",
                 fontSize: 12,
                 cursor: "pointer",
                 padding: "4px 8px",
@@ -266,7 +269,7 @@ function Dashboard({ session }) {
             fontSize: "clamp(28px, 5vw, 40px)",
             fontWeight: 600,
             margin: "4px 0 20px",
-            color: "#1B2B44",
+            color: isDarkSection ? "#fff" : "#1B2B44",
           }}
         >
           {section === "home" ? "Home" : section === "bpDetail" ? "Your blood pressure, over time" : section === "walk" ? "Track a walk" : "Guided breathing"}
