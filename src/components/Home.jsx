@@ -1,20 +1,21 @@
-import { HeartPulse, Droplet, ChevronRight } from "lucide-react";
+import { HeartPulse, Droplet, ChevronRight, Gauge, Search, Home as HomeIcon, Footprints, Baby, UtensilsCrossed, Ban, Salad, ClipboardList } from "lucide-react";
 
 // Matches the "HOME" screen you shared: two record cards side by side,
-// then a scrollable list of colorful "Info & Knowledge" cards.
+// then a scrollable list of colorful "Info & Knowledge" cards, each with
+// a small circular icon illustrating the topic.
 // Pass in latestBP ({sys, dia} or null) and latestSugar ({value} or null).
 
 const INFO_CARDS = [
-  { title: "Normal Range of Blood Pressure", color: "#3E9E8F" },
-  { title: "What is Blood Pressure?", color: "#E0B02E" },
-  { title: "Find Your Blood Pressure Type", color: "#C7405A" },
-  { title: "Measure BP at Home", color: "#C7405A" },
-  { title: "Change Lifestyle to Fight Hypotension", color: "#3E9E5C" },
-  { title: "Know & Treat Gestational Hypertension", color: "#3E7FDB" },
-  { title: "Avoid 9 Foods for Hypertension", color: "#E0B02E" },
-  { title: "Avoid 5 Foods for Hypotension", color: "#3E9E8F" },
-  { title: "Control Hypotension via Diet", color: "#C7405A" },
-  { title: "Get Tests to Diagnose Hypertension", color: "#3E9E5C" },
+  { title: "Normal Range of Blood Pressure", color: "#3E9E8F", icon: Gauge },
+  { title: "What is Blood Pressure?", color: "#E0B02E", icon: HeartPulse },
+  { title: "Find Your Blood Pressure Type", color: "#C7405A", icon: Search },
+  { title: "Measure BP at Home", color: "#C7405A", icon: HomeIcon },
+  { title: "Change Lifestyle to Fight Hypotension", color: "#3E9E5C", icon: Footprints },
+  { title: "Know & Treat Gestational Hypertension", color: "#3E7FDB", icon: Baby },
+  { title: "Avoid 9 Foods for Hypertension", color: "#E0B02E", icon: UtensilsCrossed },
+  { title: "Avoid 5 Foods for Hypotension", color: "#3E9E8F", icon: Ban },
+  { title: "Control Hypotension via Diet", color: "#C7405A", icon: Salad },
+  { title: "Get Tests to Diagnose Hypertension", color: "#3E9E5C", icon: ClipboardList },
 ];
 
 export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenInfo }) {
@@ -45,26 +46,44 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
       {/* Info & Knowledge */}
       <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>Info & Knowledge</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {INFO_CARDS.map((card, i) => (
-          <button
-            key={i}
-            onClick={() => onOpenInfo?.(card.title, card.color)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: card.color,
-              border: "none",
-              borderRadius: 16,
-              padding: "18px 18px",
-              textAlign: "left",
-              cursor: "pointer",
-            }}
-          >
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", maxWidth: "80%" }}>{card.title}</span>
-            <ChevronRight size={20} color="#fff" />
-          </button>
-        ))}
+        {INFO_CARDS.map((card, i) => {
+          const Icon = card.icon;
+          return (
+            <button
+              key={i}
+              onClick={() => onOpenInfo?.(card.title, card.color)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                background: card.color,
+                border: "none",
+                borderRadius: 16,
+                padding: "16px 16px 16px 18px",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", flex: 1 }}>{card.title}</span>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.22)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: "0 0 auto",
+                }}
+              >
+                <Icon size={22} color="#fff" />
+              </div>
+              <ChevronRight size={20} color="#fff" style={{ flex: "0 0 auto" }} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
