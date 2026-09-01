@@ -21,6 +21,20 @@ function HeartIcon({ size = 22, color = "#fff" }) {
   );
 }
 
+// Original illustration of a bathroom scale
+function ScaleIllustration() {
+  return (
+    <svg width="52" height="46" viewBox="0 0 56 50" fill="none">
+      <rect x="2" y="8" width="52" height="40" rx="10" fill="#fff" />
+      <rect x="2" y="8" width="52" height="40" rx="10" fill="none" stroke="#CFE0F2" strokeWidth="1.5" />
+      <circle cx="28" cy="28" r="13" fill="#EAF4FB" stroke="#8FB4DC" strokeWidth="1.5" />
+      <line x1="28" y1="28" x2="34" y2="21" stroke="#3E7FDB" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="28" cy="28" r="2" fill="#3E7FDB" />
+      <rect x="20" y="4" width="16" height="6" rx="2" fill="#B9D4EC" />
+    </svg>
+  );
+}
+
 function BPCuffIllustration() {
   return (
     <svg width="60" height="48" viewBox="0 0 64 52" fill="none">
@@ -63,7 +77,7 @@ function ensurePulseKeyframes() {
   document.head.appendChild(style);
 }
 
-export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenInfo }) {
+export function Home({ latestBP, latestSugar, latestWeight, onRecordBP, onRecordSugar, onRecordWeight, onOpenInfo }) {
   ensurePulseKeyframes();
 
   return (
@@ -128,8 +142,8 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
         </div>
       </div>
 
-      {/* Two summary blocks */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+      {/* Summary blocks */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         <SummaryCard
           illustration={<BPCuffIllustration />}
           title="Blood Pressure"
@@ -145,6 +159,14 @@ export function Home({ latestBP, latestSugar, onRecordBP, onRecordSugar, onOpenI
           unit="mg/dL"
           onRecord={onRecordSugar}
           accent="#3E9E8F"
+        />
+        <SummaryCard
+          illustration={<ScaleIllustration />}
+          title="Weight & BMI"
+          value={latestWeight ? `${latestWeight.weight} kg` : "--"}
+          unit={latestWeight?.bmi ? `BMI ${latestWeight.bmi.toFixed(1)}` : ""}
+          onRecord={onRecordWeight}
+          accent="#D9A544"
         />
       </div>
 
@@ -201,7 +223,7 @@ function SummaryCard({ illustration, title, value, unit, onRecord, accent }) {
   return (
     <div
       style={{
-        flex: 1,
+        flex: "1 1 150px",
         background: "#fff",
         borderRadius: 20,
         padding: "20px 14px 16px",
