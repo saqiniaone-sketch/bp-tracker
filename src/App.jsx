@@ -219,7 +219,7 @@ function Dashboard({ session }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <HeartPulse size={22} color="#C75146" />
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#4A5C6E", fontWeight: 600 }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "#8C9A94", fontWeight: 800 }}>
               PRESSURE LOG
             </span>
           </div>
