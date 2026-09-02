@@ -21,6 +21,19 @@ function HeartIcon({ size = 22, color = "#fff" }) {
   );
 }
 
+// Original illustration of a fingertip over a lens (camera pulse scan)
+function FingerprintIllustration() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 56 56" fill="none">
+      <circle cx="28" cy="28" r="24" fill="#FBEAEA" />
+      <path d="M28 14a10 10 0 0 0-10 10c0 6 4 8 4 12" stroke="#C75146" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M28 18a6 6 0 0 0-6 6c0 5 3 6 3 10" stroke="#C75146" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M28 22a2 2 0 0 0-2 2c0 4 2 5 2 8" stroke="#C75146" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M34 20c1.5 2 2 4 2 6c0 6 -3 8 -3 12" stroke="#C75146" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Original illustration of a bathroom scale
 function ScaleIllustration() {
   return (
@@ -77,7 +90,7 @@ function ensurePulseKeyframes() {
   document.head.appendChild(style);
 }
 
-export function Home({ latestBP, latestSugar, latestWeight, onRecordBP, onRecordSugar, onRecordWeight, onOpenInfo }) {
+export function Home({ latestBP, latestSugar, latestWeight, latestPulse, onRecordBP, onRecordSugar, onRecordWeight, onRecordPulse, onOpenInfo }) {
   ensurePulseKeyframes();
 
   return (
@@ -167,6 +180,14 @@ export function Home({ latestBP, latestSugar, latestWeight, onRecordBP, onRecord
           unit={latestWeight?.bmi ? `BMI ${latestWeight.bmi.toFixed(1)}` : ""}
           onRecord={onRecordWeight}
           accent="#D9A544"
+        />
+        <SummaryCard
+          illustration={<FingerprintIllustration />}
+          title="Pulse (Camera)"
+          value={latestPulse ? `${latestPulse.bpm}` : "--"}
+          unit="bpm"
+          onRecord={onRecordPulse}
+          accent="#C75146"
         />
       </div>
 
