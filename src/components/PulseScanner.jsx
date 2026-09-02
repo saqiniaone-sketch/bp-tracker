@@ -135,11 +135,46 @@ export function PulseScanner({ onSave, onClose }) {
   const startScan = async () => {
     setErrorMsg("");
     samplesRef.current = [];
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrorMsg("This browser doesn't support camera access. Try opening this app in Chrome instead.");
+      setPhase("error");
+      return;
+    }
+
+    let stream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // First choice: rear camera specifically (has the flash)
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
       });
+    } catch (err) {
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setErrorMsg(
+          "Camera permission is blocked for this site. Tap the icon next to the address bar, open Permissions, set Camera to Allow, then reload the page and try again."
+        );
+        setPhase("error");
+        return;
+      }
+      // Fall back to any available camera (e.g. devices that don't
+      // support the "environment" facing mode constraint)
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      } catch (err2) {
+        if (err2.name === "NotFoundError" || err2.name === "DevicesNotFoundError") {
+          setErrorMsg("No camera was found on this device.");
+        } else if (err2.name === "NotReadableError") {
+          setErrorMsg("Your camera is currently in use by another app. Close other camera apps and try again.");
+        } else {
+          setErrorMsg("Couldn't access your camera. Check camera permissions for this app and try again.");
+        }
+        setPhase("error");
+        return;
+      }
+    }
+
+    try {
       streamRef.current = stream;
       const video = videoRef.current;
       video.srcObject = stream;
@@ -161,7 +196,7 @@ export function PulseScanner({ onSave, onClose }) {
       setPhase("scanning");
       rafRef.current = requestAnimationFrame(sampleFrame);
     } catch (err) {
-      setErrorMsg("Couldn't access your camera. Check camera permissions for this app and try again.");
+      setErrorMsg("The camera opened but couldn't start streaming. Please try again.");
       setPhase("error");
     }
   };
