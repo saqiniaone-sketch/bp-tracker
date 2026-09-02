@@ -10,6 +10,7 @@ import { LanguagePicker } from "./components/LanguagePicker";
 import { Home } from "./components/Home";
 import { SugarTracker } from "./components/SugarTracker";
 import { WeightTracker } from "./components/WeightTracker";
+import { PulseTracker } from "./components/PulseTracker";
 import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
 import { InfoDetail } from "./components/InfoDetail";
 import { HelpButton } from "./components/HelpButton";
@@ -217,11 +218,13 @@ function Dashboard({ session, initialLanguage }) {
   const [showNewBP, setShowNewBP] = useState(false);
   const [showNewSugar, setShowNewSugar] = useState(false);
   const [showNewWeight, setShowNewWeight] = useState(false);
+  const [showNewPulse, setShowNewPulse] = useState(false);
   const [infoTitle, setInfoTitle] = useState(null);
   const [infoColor, setInfoColor] = useState("#3E9E8F");
   const [latestBP, setLatestBP] = useState(null);
   const [latestSugar, setLatestSugar] = useState(null);
   const [latestWeight, setLatestWeight] = useState(null);
+  const [latestPulse, setLatestPulse] = useState(null);
 
   const isDarkSection = section === "home";
 
@@ -321,9 +324,11 @@ function Dashboard({ session, initialLanguage }) {
             latestBP={latestBP}
             latestSugar={latestSugar}
             latestWeight={latestWeight}
+            latestPulse={latestPulse}
             onRecordBP={() => setShowNewBP(true)}
             onRecordSugar={() => setShowNewSugar(true)}
             onRecordWeight={() => setShowNewWeight(true)}
+            onRecordPulse={() => setShowNewPulse(true)}
             onOpenInfo={(t, c) => { setInfoTitle(t); setInfoColor(c || "#3E9E8F"); }}
           />
         ) : section === "bpDetail" ? (
@@ -367,6 +372,14 @@ function Dashboard({ session, initialLanguage }) {
         showNewRecord={showNewWeight}
         onCloseNewRecord={() => setShowNewWeight(false)}
         onSaved={setLatestWeight}
+        showList={false}
+      />
+
+      <PulseTracker
+        session={session}
+        showNewRecord={showNewPulse}
+        onCloseNewRecord={() => setShowNewPulse(false)}
+        onSaved={setLatestPulse}
         showList={false}
       />
 
