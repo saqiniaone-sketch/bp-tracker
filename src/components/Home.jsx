@@ -98,7 +98,7 @@ export function Home({ latestBP, latestSugar, latestWeight, latestPulse, onRecor
       {/* Current Focus hero card, live heartbeat */}
       <div
         style={{
-          background: "linear-gradient(135deg, #4A9BE0 0%, #3E7FDB 100%)",
+          background: "linear-gradient(135deg, #E0574E 0%, #C0392B 100%)",
           borderRadius: 22,
           padding: "20px 20px 18px",
           marginBottom: 18,
@@ -138,7 +138,7 @@ export function Home({ latestBP, latestSugar, latestWeight, latestPulse, onRecor
             onClick={onRecordBP}
             style={{
               background: "#fff",
-              color: "#2E6FCB",
+              color: "#C0392B",
               border: "none",
               borderRadius: 999,
               padding: "10px 18px",
