@@ -155,16 +155,9 @@ export function Home({ latestBP, latestSugar, latestWeight, latestPulse, onRecor
         </div>
       </div>
 
-      {/* Summary blocks */}
+      {/* Summary blocks — Blood Pressure is intentionally omitted here since
+          "Measure Now" in the hero card above already covers it */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-        <SummaryCard
-          illustration={<BPCuffIllustration />}
-          title="Blood Pressure"
-          value={latestBP ? `${latestBP.sys}/${latestBP.dia}` : "--/--"}
-          unit="mmHg"
-          onRecord={onRecordBP}
-          accent="#3E7FDB"
-        />
         <SummaryCard
           illustration={<GlucometerIllustration />}
           title="Blood Sugar"
