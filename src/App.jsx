@@ -14,6 +14,7 @@ import { PulseTracker } from "./components/PulseTracker";
 import { NewBPRecordScreen } from "./components/NewBPRecordScreen";
 import { InfoDetail } from "./components/InfoDetail";
 import { HelpButton } from "./components/HelpButton";
+import { DeleteAccountModal } from "./components/DeleteAccountModal";
 // --- Clinical classification (AHA guidelines) ---
 function classify(sys, dia) {
   if (sys >= 180 || dia >= 120) {
@@ -220,6 +221,7 @@ function Dashboard({ session, initialLanguage }) {
   const [showNewWeight, setShowNewWeight] = useState(false);
   const [showNewPulse, setShowNewPulse] = useState(false);
   const [infoTitle, setInfoTitle] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [infoColor, setInfoColor] = useState("#3E9E8F");
   const [latestBP, setLatestBP] = useState(null);
   const [latestSugar, setLatestSugar] = useState(null);
@@ -282,6 +284,23 @@ function Dashboard({ session, initialLanguage }) {
               }}
             >
               <LogOut size={14} /> Sign out
+            </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "none",
+                border: "none",
+                color: "#C75146",
+                fontSize: 11,
+                cursor: "pointer",
+                padding: "4px 6px",
+                opacity: 0.8,
+              }}
+            >
+              Delete account
             </button>
           </div>
         </div>
@@ -386,6 +405,8 @@ function Dashboard({ session, initialLanguage }) {
       {infoTitle && <InfoDetail title={infoTitle} color={infoColor} onClose={() => setInfoTitle(null)} uiLanguage={uiLanguage} speak={speak} />}
 
       <HelpButton uiLanguage={uiLanguage} />
+
+      {showDeleteModal && <DeleteAccountModal session={session} onClose={() => setShowDeleteModal(false)} />}
     </div>
   );
 }
