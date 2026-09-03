@@ -6,7 +6,7 @@ import { classifySugar } from "../utils/classifySugar";
 const CONDITIONS = ["Default", "Fasting", "After meal", "Before meal"];
 
 export function NewSugarRecordScreen({ onSave, onClose }) {
-  const [value, setValue] = useState(90.0);
+  const [value, setValue] = useState(90);
   const [condition, setCondition] = useState("Default");
   const [when, setWhen] = useState(new Date().toISOString().slice(0, 16));
   const [note, setNote] = useState("");
@@ -43,7 +43,7 @@ export function NewSugarRecordScreen({ onSave, onClose }) {
       </div>
 
       <div style={{ padding: "10px 8px 20px" }}>
-        <ScrollNumberPicker value={value} onChange={setValue} step={0.1} min={20} max={400} unit="mg/dL" accentColor={cat.color} />
+        <ScrollNumberPicker value={value} onChange={setValue} step={1} min={20} max={400} unit="mg/dL" accentColor={cat.color} />
       </div>
 
       <div style={{ margin: "0 16px 16px", background: "#2B3B54", borderRadius: 16, padding: "16px" }}>
