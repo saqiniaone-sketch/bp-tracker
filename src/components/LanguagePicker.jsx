@@ -47,6 +47,7 @@ export function LanguagePicker({ onSelect }) {
         {[
           { key: "en", label: "English" },
           { key: "ur", label: "اردو" },
+          { key: "hi", label: "हिन्दी" },
         ].map((opt) => (
           <button
             key={opt.key}
