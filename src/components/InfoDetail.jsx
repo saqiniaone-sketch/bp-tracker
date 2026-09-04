@@ -7,7 +7,7 @@ import { INFO_CONTENT, INFO_DISCLAIMER } from "../utils/infoContent";
 // section cards on a dark body — in English or Urdu, with a Listen button.
 export function InfoDetail({ title, color = "#3E9E8F", onClose, uiLanguage, speak }) {
   const [speaking, setSpeaking] = useState(false);
-  const lang = uiLanguage === "ur" ? "ur" : "en";
+  const lang = uiLanguage === "ur" ? "ur" : uiLanguage === "hi" ? "hi" : "en";
   const entry = INFO_CONTENT[title];
   const content = entry?.[lang];
   const disclaimer = INFO_DISCLAIMER[lang];
@@ -21,7 +21,7 @@ export function InfoDetail({ title, color = "#3E9E8F", onClose, uiLanguage, spea
     }
     if (!content) return;
     setSpeaking(true);
-    speak(content.spoken, isRTL ? "ur-PK" : "en-US");
+    speak(content.spoken, lang === "ur" ? "ur-PK" : lang === "hi" ? "hi-IN" : "en-US");
     const check = setInterval(() => {
       if (!window.speechSynthesis?.speaking) {
         setSpeaking(false);
@@ -78,7 +78,9 @@ export function InfoDetail({ title, color = "#3E9E8F", onClose, uiLanguage, spea
             }}
           >
             {speaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
-            {speaking ? (isRTL ? "روکیں" : "Stop") : isRTL ? "سنیں" : "Listen"}
+            {speaking
+              ? lang === "ur" ? "روکیں" : lang === "hi" ? "रोकें" : "Stop"
+              : lang === "ur" ? "سنیں" : lang === "hi" ? "सुनें" : "Listen"}
           </button>
         </div>
       )}
