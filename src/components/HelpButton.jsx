@@ -7,7 +7,7 @@ import { FAQ_CONTENT, FAQ_LABELS } from "../utils/faqContent";
 export function HelpButton({ uiLanguage }) {
   const [open, setOpen] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState(null);
-  const lang = uiLanguage === "ur" ? "ur" : "en";
+  const lang = uiLanguage === "ur" ? "ur" : uiLanguage === "hi" ? "hi" : "en";
   const isRTL = lang === "ur";
   const faqs = FAQ_CONTENT[lang];
   const labels = FAQ_LABELS[lang];
@@ -80,11 +80,11 @@ export function HelpButton({ uiLanguage }) {
                         border: "none",
                         padding: "14px 16px",
                         cursor: "pointer",
-                        textAlign: isRTL ? "right" : "left",
+                        textAlign: isRTL ? "right": "left",
                       }}
                     >
                       <span style={{ color: "#fff", fontSize: 14.5, fontWeight: 600 }}>{item.q}</span>
-                      {isExpanded ? <ChevronUp size={18} color="#8C9A94" /> : <ChevronDown size={18} color="#8C9A94" />}
+                      {isExpanded? <ChevronUp size={18} color="#8C9A94" /> : <ChevronDown size={18} color="#8C9A94" />}
                     </button>
                     {isExpanded && (
                       <div style={{ padding: "0 16px 16px" }}>
